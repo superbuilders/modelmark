@@ -25,6 +25,7 @@ bun src/cli.ts install|uninstall           # Add or remove the hook (node_module
 bun src/cli.ts doctor [--json]             # Check the setup and show the mark a commit would get
 bun src/cli.ts summary [range] [--json|--markdown]  # Count trailers across commits (default: this branch's)
 bun src/cli.ts hook <msg-file> [source]    # Hidden: what the hook runs to append the trailer
+bun run bump                               # Release: bump the version, commit, tag v<version>, push
 bun scripts/lab list|run|status|probe      # Real-harness checks, here and on the Mac (scripts/lab/README.md)
 ```
 
@@ -173,6 +174,10 @@ tested-versions table; commit both. Adding a harness starts with
 ## Releases
 
 modelmark is published to npm as `modelmark` from GitHub Actions with trusted
-publishing (no npm token). Bump `version` in `package.json`, commit, and push a
-matching `v<version>` tag; `.github/workflows/release.yml` checks, tests and
-publishes. The package ships `src` without tests, and `tested-versions.json`.
+publishing (no npm token). A pushed `v<version>` tag is the release: pushing
+`main` alone publishes nothing. On an up-to-date `main`, run `bun run bump`
+(bumpp): it asks for the new version, updates `package.json`, commits
+`Release v<version>`, tags `v<version>`, and pushes both.
+`.github/workflows/release.yml` then checks that the tag matches
+`package.json`, runs the checks and tests, and publishes. The package ships
+`src` without tests, and `tested-versions.json`.
