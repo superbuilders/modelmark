@@ -1,0 +1,10 @@
+{
+    "root": "src",
+    "allow": {
+        "cli": ["program"],
+        "program": ["commands"],
+        "commands": ["agents", "system"],
+        "agents": ["system"],
+        "system": []
+    }
+}

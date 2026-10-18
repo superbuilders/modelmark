@@ -1,0 +1,58 @@
+import type { AgentId, ModelUse, Platform } from './types'
+
+/** Executable names (the command's first word, without its folder) and the agent each one is. */
+export const AGENT_EXECUTABLES: Readonly<Record<string, AgentId>> = {
+    claude: 'claude-code',
+    codex: 'codex',
+    pi: 'pi',
+}
+
+/** The executable that starts each harness, for asking its version. */
+export const HARNESS_COMMANDS: Readonly<Record<AgentId, string>> = {
+    'claude-code': 'claude',
+    codex: 'codex',
+    pi: 'pi',
+}
+
+/** Harness names as people write them. */
+export const HARNESS_NAMES: Readonly<Record<AgentId, string>> = {
+    'claude-code': 'Claude Code',
+    codex: 'Codex',
+    pi: 'Pi',
+}
+
+/** Platform names as people write them. */
+export const PLATFORM_NAMES: Readonly<Record<Platform, string>> = {
+    linux: 'Linux',
+    macos: 'macOS',
+}
+
+/** The lab's record of harness versions that passed, relative to modelmark's own folder. */
+export const TESTED_VERSIONS_FILE = 'tested-versions.json'
+
+/** Runtimes that launch an agent as a script (`node /path/to/codex`); the script names the agent. */
+export const SCRIPT_RUNTIMES: readonly string[] = ['node', 'nodejs', 'bun']
+
+/** A process tree deeper than this is treated as a loop. */
+export const MAX_TREE_DEPTH = 64
+
+/** The commit trailer modelmark writes, following the Linux kernel's convention. */
+export const TRAILER_KEY = 'Assisted-by'
+
+/** Written in place of the model when the agent's log could not be read. */
+export const UNKNOWN_MODEL = 'unknown'
+
+/** Separates the agent from the model in a mark: `codex:gpt-5.6-terra`. */
+export const AGENT_SEPARATOR = ':'
+
+/** Separates the model from its effort in a mark: `codex:gpt-5.6-terra@high`. */
+export const EFFORT_SEPARATOR = '@'
+
+/** What an unreadable log gives. */
+export const NO_MODEL_USE: Readonly<ModelUse> = { model: null, effort: null }
+
+/** The extension every agent's session log uses. */
+export const JSONL = '.jsonl'
+
+/** Claude Code's placeholder model on records it writes itself, not the model's replies. */
+export const CLAUDE_SYNTHETIC_MODEL = '<synthetic>'

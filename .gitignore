@@ -1,0 +1,8 @@
+node_modules/
+tmp/
+dist/
+coverage/
+.env*
+!.env.example
+*.tsbuildinfo
+.claude/worktrees/

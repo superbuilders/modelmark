@@ -1,0 +1,46 @@
+name: Release
+
+on:
+    push:
+        tags: ['v*']
+
+permissions:
+    contents: read
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+            contents: read
+            id-token: write
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version-file: package.json
+
+            - name: Verify tag matches package.json version
+              env:
+                  RELEASE_TAG: ${{ github.ref_name }}
+              run: test "$RELEASE_TAG" = "v$(bun -p "require('./package.json').version")"
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Check
+              run: bun run check --pre-push
+
+            - name: Test
+              run: bun run test
+
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+
+            - name: Update npm for trusted publishing
+              run: npm install --global npm@11
+
+            - name: Publish
+              run: npm publish --access public
