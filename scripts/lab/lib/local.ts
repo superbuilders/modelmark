@@ -110,7 +110,8 @@ export async function runLocal(
     keep: boolean,
 ): Promise<HostResult> {
     const platform = currentPlatform()
-    const versions = await readVersions(argv => spawn(argv))
+    const needed = [...new Set(scenarios.flatMap(scenario => scenario.harnesses))]
+    const versions = await readVersions(argv => spawn(argv), needed)
     const run = join(LAB_ROOT, 'runs', `${Date.now()}-${process.pid}`)
     const results: ScenarioResult[] = Array.from({ length: scenarios.length })
 

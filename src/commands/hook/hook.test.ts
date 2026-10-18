@@ -48,7 +48,7 @@ describe('markMessage', () => {
     test('appends the trailer after the message', async () => {
         const path = messageFile('Fix the login bug\n')
 
-        expect(await markMessage(path, 'message', OPUS)).toBe(
+        expect(await markMessage(path, OPUS)).toBe(
             'Assisted-by: claude-code:claude-opus-5-5@medium',
         )
         expect(readFileSync(path, 'utf8')).toBe(
@@ -61,7 +61,7 @@ describe('markMessage', () => {
             'Fix it\n\nCo-Authored-By: A <a@b>\n# Please enter the commit message\n#\n',
         )
 
-        await markMessage(path, undefined, OPUS)
+        await markMessage(path, OPUS)
 
         expect(readFileSync(path, 'utf8')).toBe(
             'Fix it\n\nCo-Authored-By: A <a@b>\nAssisted-by: claude-code:claude-opus-5-5@medium\n# Please enter the commit message\n#\n',
@@ -71,29 +71,26 @@ describe('markMessage', () => {
     test('an amend adds a different agent once and never repeats one', async () => {
         const path = messageFile('Fix it\n\nAssisted-by: claude-code:claude-opus-5-5@medium\n')
 
-        await markMessage(path, 'commit', OPUS)
-        await markMessage(path, 'commit', TERRA)
-        await markMessage(path, 'commit', TERRA)
+        await markMessage(path, OPUS)
+        await markMessage(path, TERRA)
+        await markMessage(path, TERRA)
 
         expect(readFileSync(path, 'utf8')).toBe(
             'Fix it\n\nAssisted-by: claude-code:claude-opus-5-5@medium\nAssisted-by: codex:gpt-5.6-terra@high\n',
         )
     })
 
-    test("leaves merges and a person's own commits unmarked", async () => {
-        const merge = messageFile("Merge branch 'dev'\n")
+    test("leaves a person's own commit unmarked", async () => {
         const human = messageFile('By hand\n')
 
-        expect(await markMessage(merge, 'merge', OPUS)).toBeNull()
-        expect(await markMessage(human, 'message', null)).toBeNull()
-        expect(readFileSync(merge, 'utf8')).toBe("Merge branch 'dev'\n")
+        expect(await markMessage(human, null)).toBeNull()
         expect(readFileSync(human, 'utf8')).toBe('By hand\n')
     })
 
     test('an unreadable model is recorded as unknown, keeping the agent', async () => {
         const path = messageFile('Fix\n')
 
-        await markMessage(path, 'message', {
+        await markMessage(path, {
             agent: 'pi',
             model: null,
             effort: null,
@@ -114,6 +111,16 @@ describe('hookCommand', () => {
         expect(readFileSync(path, 'utf8')).toContain(
             'Assisted-by: claude-code:claude-opus-5-5@medium',
         )
+    })
+
+    test('skips a merge without looking for an agent', async () => {
+        const merge = messageFile("Merge branch 'dev'\n")
+
+        vi.mocked(detect).mockClear()
+        await hookCommand(merge, 'merge')
+
+        expect(detect).not.toHaveBeenCalled()
+        expect(readFileSync(merge, 'utf8')).toBe("Merge branch 'dev'\n")
     })
 
     test('a failure warns and leaves the commit to go ahead', async () => {

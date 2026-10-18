@@ -1,24 +1,5 @@
-/**
- * Vitest options that consume the next token, so their values are never read
- * as test paths, even when the value exists on disk (`--root ../..`).
- */
-export const VALUE_OPTIONS = new Set([
-    '-c',
-    '--config',
-    '-r',
-    '--root',
-    '--dir',
-    '-t',
-    '--testNamePattern',
-    '--project',
-    '--reporter',
-    '--outputFile',
-    '--shard',
-    '--pool',
-    '--environment',
-    '--maxWorkers',
-    '--changed',
-])
+/** The Vitest subcommand that only lists test files, so it may always run. */
+export const LIST_SUBCOMMAND = 'list'
 
-/** Vitest subcommands; a bare `vitest` is watch mode over everything. */
-export const SUBCOMMANDS = new Set(['run', 'watch', 'dev', 'related', 'bench', 'list'])
+/** The Vitest subcommand that runs every test importing the named source files. */
+export const RELATED_SUBCOMMAND = 'related'

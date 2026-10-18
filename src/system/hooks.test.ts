@@ -6,7 +6,7 @@ import { describe, expect, test } from 'vitest'
 
 import { git } from './command'
 import { HOOK_LINES } from './constants'
-import { findHookFile, hookStyle, runsModelmark, wantedStyle } from './hooks'
+import { findHookFile, hookStyle, wantedStyle } from './hooks'
 
 /**
  * Make an empty repository.
@@ -70,7 +70,7 @@ describe('hookStyle', () => {
 
     test('is null for a hook without one of them', () => {
         expect(hookStyle({ ...hook, text: `# ${HOOK_LINES.path}\n` })).toBeNull()
-        expect(runsModelmark({ ...hook, text: null })).toBe(false)
+        expect(hookStyle({ ...hook, text: null })).toBeNull()
     })
 })
 

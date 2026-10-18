@@ -3,7 +3,9 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { runSteps } from '../../lib/run-step'
+import { bold } from 'colorette'
+
+import { formatDuration, Spinner } from '../../lib/spinner'
 import { CHECK_LOG_PATH, CHECKS_FAILED_EXIT_CODE } from './constants'
 
 import type { CheckOptions, CheckResult, CheckStep } from './types'
@@ -76,7 +78,8 @@ function runCommand(step: CheckStep, cwd: string): Promise<CheckResult> {
 export async function runChecks(options: CheckOptions): Promise<number> {
     const root = fileURLToPath(new URL('../../../', import.meta.url))
     const logPath = join(root, CHECK_LOG_PATH)
-    const results: CheckResult[] = []
+    const steps = buildSteps(options)
+    const spinner = new Spinner(steps.map(step => step.name))
 
     await mkdir(dirname(logPath), { recursive: true })
     await writeFile(
@@ -85,35 +88,38 @@ export async function runChecks(options: CheckOptions): Promise<number> {
     )
     console.log(`Check log: ${CHECK_LOG_PATH}`)
 
-    const steps = Object.fromEntries(
-        buildSteps(options).map(step => [
-            step.name,
-            {
-                text: step.name,
-                action: async () => {
-                    const result = await runCommand(step, root)
+    spinner.start()
 
-                    results.push(result)
+    const results = await Promise.all(
+        steps.map(async step => {
+            const started = performance.now()
 
-                    if (result.exitCode !== 0) {
-                        throw new Error(`exit ${result.exitCode}; full output in ${CHECK_LOG_PATH}`)
-                    }
-                },
-            },
-        ]),
+            spinner.updateTask(step.name, 'running')
+
+            const result = await runCommand(step, root)
+
+            if (result.exitCode === 0) {
+                const duration = formatDuration(performance.now() - started)
+
+                spinner.updateTask(step.name, 'success', `${bold(step.name)} ${duration}`)
+            } else {
+                spinner.updateTask(step.name, 'error')
+            }
+
+            return result
+        }),
     )
-    const passed = await runSteps(steps).then(
-        () => true,
-        () => false,
-    )
 
-    if (passed) {
+    spinner.stop()
+
+    const failures = results.filter(result => result.exitCode !== 0)
+
+    if (failures.length === 0) {
         await writeFile(logPath, `Checks passed at ${new Date().toISOString()}.\n`)
 
         return 0
     }
 
-    const failures = results.filter(result => result.exitCode !== 0)
     const pointer = `Checks failed (${failures.map(result => result.step.name).join(', ')}). Full output: ${CHECK_LOG_PATH}`
     const details = failures.map(
         result =>

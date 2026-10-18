@@ -1,13 +1,6 @@
 import type { AgentId, ModelUse, Platform } from './types'
 
-/** Executable names (the command's first word, without its folder) and the agent each one is. */
-export const AGENT_EXECUTABLES: Readonly<Record<string, AgentId>> = {
-    claude: 'claude-code',
-    codex: 'codex',
-    pi: 'pi',
-}
-
-/** The executable that starts each harness, for asking its version. */
+/** The executable that starts each harness: what the process walk looks for, and what asks its version. */
 export const HARNESS_COMMANDS: Readonly<Record<AgentId, string>> = {
     'claude-code': 'claude',
     codex: 'codex',

@@ -37,10 +37,11 @@ export function findLast<T>(
     try {
         let end = fstatSync(fd).size
         /*
-         * Bytes after the earliest newline seen so far that are not yet a whole
-         * line: the next (earlier) chunk completes them.
+         * Chunks after the earliest newline seen so far that are not yet a whole
+         * line: the next (earlier) chunk completes them. They hold no newline,
+         * so only each new chunk is searched, and they are joined once.
          */
-        let carry = Buffer.alloc(0)
+        let carry: Buffer[] = []
 
         while (end > 0) {
             const start = Math.max(0, end - chunkBytes)
@@ -48,22 +49,21 @@ export function findLast<T>(
 
             readSync(fd, chunk, 0, chunk.length, start)
 
-            const text = Buffer.concat([chunk, carry])
             /*
              * Everything before the first newline may continue in an earlier
              * chunk, unless this chunk starts the file.
              */
-            const cut = start > 0 ? text.indexOf('\n') : -1
+            const cut = start > 0 ? chunk.indexOf('\n') : -1
 
             end = start
 
             if (start > 0 && cut === -1) {
-                carry = text
+                carry = [chunk, ...carry]
 
                 continue
             }
 
-            const lines = text
+            const lines = Buffer.concat([chunk, ...carry])
                 .subarray(cut + 1)
                 .toString('utf8')
                 .split('\n')
@@ -80,7 +80,7 @@ export function findLast<T>(
                 }
             }
 
-            carry = text.subarray(0, Math.max(cut, 0))
+            carry = [chunk.subarray(0, Math.max(cut, 0))]
         }
 
         return undefined

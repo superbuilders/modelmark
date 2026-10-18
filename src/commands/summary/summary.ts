@@ -89,8 +89,10 @@ async function defaultBranch(cwd?: string): Promise<string> {
  * @returns the range, such as `origin/main..HEAD`
  */
 export async function defaultRange(cwd?: string): Promise<string> {
-    const base = await defaultBranch(cwd)
-    const branch = await git(['branch', '--show-current'], cwd)
+    const [base, branch] = await Promise.all([
+        defaultBranch(cwd),
+        git(['branch', '--show-current'], cwd),
+    ])
     const current = branch.trim()
 
     if (current && (base === current || base.endsWith(`/${current}`))) {

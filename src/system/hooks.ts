@@ -48,15 +48,6 @@ export function hookStyle(hook: HookFile): HookStyle | null {
 }
 
 /**
- * Whether a hook file runs modelmark.
- * @param hook - the hook file
- * @returns true when it holds one of modelmark's lines
- */
-export function runsModelmark(hook: HookFile): boolean {
-    return hookStyle(hook) !== null
-}
-
-/**
  * The hook style a repository should use: `dependency` when its package.json
  * lists modelmark, so everyone gets the version the repository pins.
  * @param root - the repository's root folder

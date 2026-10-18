@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { runCommand } from '../system/command'
 import { HARNESS_COMMANDS, TESTED_VERSIONS_FILE } from './constants'
 
+import type { CommandResult } from '../system/types'
 import type { AgentId, Platform, TestedRecord, TestedVersion } from './types'
 
 /**
@@ -16,12 +17,16 @@ export function parseVersion(output: string): string | null {
 }
 
 /**
- * The installed version of a harness on this machine.
+ * The installed version of a harness.
  * @param agent - the harness
+ * @param run - runs the version command (default: on this machine)
  * @returns its version, or null when it is missing
  */
-export async function installedVersion(agent: AgentId): Promise<string | null> {
-    const result = await runCommand([HARNESS_COMMANDS[agent], '--version'])
+export async function installedVersion(
+    agent: AgentId,
+    run: (argv: string[]) => Promise<CommandResult> = runCommand,
+): Promise<string | null> {
+    const result = await run([HARNESS_COMMANDS[agent], '--version'])
 
     return result.exitCode === 0 ? parseVersion(result.stdout) : null
 }

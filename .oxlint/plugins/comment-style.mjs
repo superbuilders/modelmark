@@ -33,6 +33,8 @@
  * comment should move is a human call.
  */
 
+import { ownLineIndent } from './lib.mjs'
+
 /*
  * Comments that are machine directives, not prose — rewriting them in any way
  * would silently disable them: TypeScript only honors `@ts-` directives in
@@ -146,26 +148,6 @@ const propertyComments = {
         const { sourceCode } = context
 
         /**
-         * The whitespace indent of the line a comment starts on, or null when
-         * code precedes the comment on that line (a trailing comment).
-         *
-         * @param commentStart - Source offset of the comment opener.
-         * @returns The indent string, or null for trailing comments.
-         */
-        function ownLineIndent(commentStart) {
-            const { text } = sourceCode
-            let index = commentStart
-
-            while (index > 0 && text[index - 1] !== '\n') {
-                index -= 1
-            }
-
-            const prefix = text.slice(index, commentStart)
-
-            return /^[ \t]*$/.test(prefix) ? prefix : null
-        }
-
-        /**
          * Reports (and rewrites) a leading property comment in a field-doc
          * context, where the sanctioned shape is JSDoc (it surfaces in IDE
          * hover): a plain block promotes its opener, a line comment becomes a
@@ -235,7 +217,7 @@ const propertyComments = {
                 comment.type === 'Line'
                     ? comment.value.trim()
                     : comment.value.replace(/^\*/, '').trim()
-            const indent = ownLineIndent(comment.range[0])
+            const indent = ownLineIndent(sourceCode.text, comment.range[0])
 
             context.report({
                 loc: comment.loc,
@@ -381,7 +363,7 @@ const propertyComments = {
             }
 
             const text = doc.value.replace(/^\*/, '').trim()
-            const indent = ownLineIndent(doc.range[0])
+            const indent = ownLineIndent(sourceCode.text, doc.range[0])
 
             context.report({
                 loc: doc.loc,
@@ -417,7 +399,7 @@ const propertyComments = {
                     continue
                 }
 
-                const indent = ownLineIndent(comment.range[0])
+                const indent = ownLineIndent(sourceCode.text, comment.range[0])
 
                 if (indent === null) {
                     continue

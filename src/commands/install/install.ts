@@ -3,7 +3,7 @@ import { chmod, mkdir, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 
 import { HOOK_LINES, LOCAL_BIN } from '../../system/constants'
-import { findHookFile, hookStyle, runsModelmark, wantedStyle } from '../../system/hooks'
+import { findHookFile, hookStyle, wantedStyle } from '../../system/hooks'
 
 import type { HookFile, HookStyle } from '../../system/types'
 import type { InstallResult } from './types'
@@ -17,16 +17,8 @@ function shown(hook: HookFile): string {
     return relative(process.cwd(), hook.path)
 }
 
-/**
- * A hook's lines with every modelmark line taken out.
- * @param text - the hook's contents
- * @returns the other lines
- */
-function withoutModelmark(text: string): string[] {
-    const ours = new Set(Object.values(HOOK_LINES))
-
-    return text.split('\n').filter(line => !ours.has(line))
-}
+/** Every line modelmark writes, to recognize one whatever its style. */
+const OUR_LINES = new Set(Object.values(HOOK_LINES))
 
 /**
  * Write a hook file and make it executable.
@@ -58,7 +50,10 @@ export async function install(): Promise<InstallResult> {
     }
 
     if (current) {
-        const text = (hook.text ?? '').replace(HOOK_LINES[current], line)
+        const text = (hook.text ?? '')
+            .split('\n')
+            .map(existing => (OUR_LINES.has(existing) ? line : existing))
+            .join('\n')
 
         await writeHook(hook, text)
 
@@ -84,11 +79,18 @@ export async function install(): Promise<InstallResult> {
 export async function uninstall(): Promise<HookFile | null> {
     const hook = await findHookFile()
 
-    if (!runsModelmark(hook) || hook.text === null) {
+    if (hook.text === null) {
         return null
     }
 
-    const rest = withoutModelmark(hook.text).join('\n')
+    const rest = hook.text
+        .split('\n')
+        .filter(line => !OUR_LINES.has(line))
+        .join('\n')
+
+    if (rest === hook.text) {
+        return null
+    }
 
     if (rest.replace('#!/bin/sh', '').trim() === '') {
         await rm(hook.path)

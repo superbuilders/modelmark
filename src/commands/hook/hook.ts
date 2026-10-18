@@ -10,16 +10,14 @@ import type { Detection } from '../../agents/types'
  * An amend that another agent (or model) continues gets a second trailer;
  * repeating the same one adds nothing.
  * @param messageFile - the message file git passes to prepare-commit-msg
- * @param source - the message's source git passes, such as `merge`
  * @param detection - the agent and model, or null for a person's own commit
  * @returns the trailer added, or null when the commit gets none
  */
 export async function markMessage(
     messageFile: string,
-    source: string | undefined,
     detection: Detection | null,
 ): Promise<string | null> {
-    if (!detection || (source && SKIPPED_SOURCES.includes(source))) {
+    if (!detection) {
         return null
     }
 
@@ -39,14 +37,19 @@ export async function markMessage(
 }
 
 /**
- * The prepare-commit-msg hook. It never fails the commit: a problem prints a
- * warning and the commit goes ahead unmarked.
+ * The prepare-commit-msg hook. A merge is skipped before anything is looked
+ * up, and the hook never fails the commit: a problem prints a warning and the
+ * commit goes ahead unmarked.
  * @param messageFile - the message file git passes
- * @param source - the message's source git passes
+ * @param source - the message's source git passes, such as `merge`
  */
 export async function hookCommand(messageFile: string, source?: string): Promise<void> {
+    if (source && SKIPPED_SOURCES.includes(source)) {
+        return
+    }
+
     try {
-        await markMessage(messageFile, source, await detect())
+        await markMessage(messageFile, await detect())
     } catch (error) {
         console.error(`modelmark: commit left unmarked (${String(error)})`)
     }

@@ -2,17 +2,7 @@ import { chmod, mkdir, open, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { BIG_LOG_BYTES, COMMIT_MESSAGE, MODELS } from './constants'
-import {
-    AMEND,
-    claude,
-    codex,
-    codexResume,
-    codexThread,
-    COMMIT,
-    HELLO,
-    pi,
-    runPrompt,
-} from './harnesses'
+import { AMEND, claude, codex, codexThread, COMMIT, HELLO, pi, runPrompt } from './harnesses'
 import { shellQuote, SkipError } from './process'
 
 import type { Scenario, ScenarioWorkspace } from './types'
@@ -88,9 +78,10 @@ export const SCENARIOS: readonly Scenario[] = [
             )
 
             await workspace.agent(
-                codexResume(codexThread(first), runPrompt(COMMIT), {
+                codex(runPrompt(COMMIT), {
                     model: MODELS.codexSwitch,
                     effort: 'medium',
+                    thread: codexThread(first),
                 }),
             )
         },

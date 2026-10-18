@@ -12,6 +12,8 @@
  * newlines — what those mean is a human call.
  */
 
+import { ownLineIndent } from './lib.mjs'
+
 const CONSOLE_METHODS = new Set(['log', 'error', 'warn', 'info'])
 
 /** Matches one or more escaped newlines (`\n` as two source characters). */
@@ -29,26 +31,6 @@ const spacingNewlines = {
     },
     create(context) {
         const { sourceCode } = context
-
-        /**
-         * The whitespace indent of the line a statement starts on, or null
-         * when code precedes it on that line.
-         *
-         * @param start - Source offset of the statement.
-         * @returns The indent string, or null.
-         */
-        function ownLineIndent(start) {
-            const { text } = sourceCode
-            let index = start
-
-            while (index > 0 && text[index - 1] !== '\n') {
-                index -= 1
-            }
-
-            const prefix = text.slice(index, start)
-
-            return /^[ \t]*$/.test(prefix) ? prefix : null
-        }
 
         /**
          * Checks a console call's single string argument for edge newlines
@@ -94,7 +76,7 @@ const spacingNewlines = {
 
             const statement = node.parent
             const standalone = fixable && statement.type === 'ExpressionStatement'
-            const indent = standalone ? ownLineIndent(statement.range[0]) : null
+            const indent = standalone ? ownLineIndent(sourceCode.text, statement.range[0]) : null
             const allNewlines =
                 (leading?.[0].length ?? 0) + (trailing?.[0].length ?? 0) >= inner.length
 

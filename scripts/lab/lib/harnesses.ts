@@ -1,5 +1,5 @@
 import { HARNESS_COMMANDS } from '../../../src/agents/constants'
-import { parseVersion } from '../../../src/agents/versions'
+import { installedVersion } from '../../../src/agents/versions'
 import { COMMIT_MESSAGE, PI_PROVIDER_VARIABLE } from './constants'
 import { shellQuote } from './process'
 
@@ -22,6 +22,8 @@ interface ModelChoice {
 interface CodexChoice extends ModelChoice {
     /** Run in Codex's sandbox instead of without one. */
     sandbox?: boolean
+    /** Continue this thread (from the first turn's JSON events) instead of starting one. */
+    thread?: string
 }
 
 /**
@@ -74,49 +76,29 @@ export function claude(prompt: string, choice: ModelChoice, extra: string[] = []
 }
 
 /**
- * Codex's command for a first turn, printing its events as JSON so the thread can be resumed.
+ * Codex's command for one turn. A first turn prints its events as JSON, so
+ * the thread can be continued; a later turn names that thread.
  * @param prompt - the prompt
- * @param choice - model, effort and sandbox
+ * @param choice - model, effort, sandbox and thread
  * @returns the command
  */
 export function codex(prompt: string, choice: CodexChoice): string[] {
     const sandbox = choice.sandbox
         ? ['--sandbox', 'workspace-write']
         : ['--dangerously-bypass-approvals-and-sandbox']
+    const turn = choice.thread ? ['resume'] : ['--json']
 
     return [
         HARNESS_COMMANDS.codex,
         'exec',
-        '--json',
+        ...turn,
         '--skip-git-repo-check',
         ...sandbox,
         '-m',
         choice.model,
         '-c',
         `model_reasoning_effort=${choice.effort}`,
-        prompt,
-    ]
-}
-
-/**
- * Codex's command for a later turn in a thread.
- * @param thread - the thread id from the first turn
- * @param prompt - the prompt
- * @param choice - model and effort for this turn
- * @returns the command
- */
-export function codexResume(thread: string, prompt: string, choice: ModelChoice): string[] {
-    return [
-        HARNESS_COMMANDS.codex,
-        'exec',
-        'resume',
-        '--skip-git-repo-check',
-        '--dangerously-bypass-approvals-and-sandbox',
-        '-m',
-        choice.model,
-        '-c',
-        `model_reasoning_effort=${choice.effort}`,
-        thread,
+        ...(choice.thread ? [choice.thread] : []),
         prompt,
     ]
 }
@@ -161,20 +143,17 @@ export function pi(prompt: string, choice: PiChoice): string[] {
 }
 
 /**
- * The installed version of each harness.
+ * The installed version of each harness asked about.
  * @param run - runs one command on the host being checked
+ * @param agents - the harnesses to ask (default: all of them)
  * @returns the versions; a harness that is missing has no entry
  */
 export async function readVersions(
     run: (argv: string[]) => Promise<CommandResult>,
+    agents = Object.keys(HARNESS_COMMANDS) as AgentId[],
 ): Promise<Partial<Record<AgentId, string>>> {
-    const agents = Object.keys(HARNESS_COMMANDS) as AgentId[]
     const found = await Promise.all(
-        agents.map(async agent => {
-            const result = await run([HARNESS_COMMANDS[agent], '--version'])
-
-            return [agent, result.exitCode === 0 ? parseVersion(result.stdout) : null] as const
-        }),
+        agents.map(async agent => [agent, await installedVersion(agent, run)] as const),
     )
     const versions: Partial<Record<AgentId, string>> = {}
 

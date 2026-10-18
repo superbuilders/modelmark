@@ -82,4 +82,4 @@ prompt goes; otherwise it goes last). It reports:
   Only `type`, model, effort and level values are shown.
 
 With that, a new harness needs a reader in `src/agents/models.ts`, an entry in
-`AGENT_EXECUTABLES`, and its scenarios here.
+`HARNESS_COMMANDS`, and its scenarios here.

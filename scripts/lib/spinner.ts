@@ -4,7 +4,7 @@
 
 import { stderr } from 'node:process'
 
-import { blue, dim, gray, green, red } from 'colorette'
+import { blue, dim, green, red } from 'colorette'
 
 import { cursor, isProgressInteractive } from './ansi'
 
@@ -13,8 +13,12 @@ const SPINNER_FRAMES = [
 ].map(code => String.fromCodePoint(code))
 const CHECK_MARK = String.fromCodePoint(0x27_14) // ✔
 const CROSS_MARK = String.fromCodePoint(0x27_16) // ✖
-const CANCEL_MARK = String.fromCodePoint(0x25_cb) // ○
 const SPINNER_INTERVAL = 80
+
+/**
+ * Where a task is in its life.
+ */
+type TaskStatus = 'pending' | 'running' | 'success' | 'error'
 
 /**
  * State of a single task tracked by the spinner.
@@ -23,17 +27,9 @@ interface TaskState {
     /** Display label for the task — set from the constructor's `texts` array. */
     text: string
     /** Lifecycle state of the task, updated via `updateTask()`. */
-    status: 'pending' | 'running' | 'success' | 'error' | 'cancelled'
-    /** Optional override text for terminal states (success, error, cancelled); takes precedence over `text` when set. */
+    status: TaskStatus
+    /** Optional override text for a finished task; takes precedence over `text` when set. */
     finalText?: string
-}
-
-/**
- * Configuration options for the Spinner.
- */
-export interface SpinnerOptions {
-    /** Indentation level — repeated as pairs of spaces before each task line. */
-    indent?: number
 }
 
 /**
@@ -44,24 +40,15 @@ export class Spinner {
     private readonly tasks = new Map<string, TaskState>()
     private frameIndex = 0
     private intervalId: NodeJS.Timeout | null = null
-    private renderCount = 0
     private previousLineCount = 0
-    private readonly printedTasks = new Set<string>()
-    private readonly indent: number
 
     /**
-     * @param taskIds - unique identifiers for each task
-     * @param texts - display labels for each task
-     * @param options - spinner options
+     * @param names - each task's name, which is also its label
      */
-    constructor(taskIds: string[], texts: string[], options?: SpinnerOptions) {
-        this.indent = options?.indent ?? 0
-        taskIds.forEach((id, index) => {
-            this.tasks.set(id, {
-                text: texts[index] || '',
-                status: 'pending',
-            })
-        })
+    constructor(names: string[]) {
+        for (const name of names) {
+            this.tasks.set(name, { text: name, status: 'pending' })
+        }
     }
 
     /**
@@ -80,61 +67,13 @@ export class Spinner {
     }
 
     /**
-     * Clear spinner output and restore cursor.
-     */
-    clear() {
-        if (this.intervalId) {
-            clearInterval(this.intervalId)
-            this.intervalId = null
-        }
-
-        if (isProgressInteractive && this.previousLineCount > 0) {
-            stderr.write(cursor.up(this.previousLineCount))
-
-            for (let i = 0; i < this.previousLineCount; i++) {
-                stderr.write(`\r${cursor.clearLine}\n`)
-            }
-
-            stderr.write(cursor.up(this.previousLineCount))
-            stderr.write(cursor.show)
-        }
-
-        this.previousLineCount = 0
-    }
-
-    /**
-     * Update a running task's label in place — the spinner keeps spinning, only
-     * the text changes. For showing phase progress on a single long task (e.g.
-     * "opening page" → "submitting form") without stacking a line per phase.
-     *
-     * @param taskId - task identifier
-     * @param text - the new running label
-     */
-    setText(taskId: string, text: string) {
-        const task = this.tasks.get(taskId)
-
-        if (task) {
-            task.text = text
-
-            if (!isProgressInteractive && task.status === 'running') {
-                /* No in-place redraw off a TTY; emit the phase as its own line. */
-                console.error(`${'  '.repeat(this.indent)}[RUNNING] ${text}`)
-            }
-        }
-    }
-
-    /**
      * Update the status of a task.
      *
      * @param taskId - task identifier
      * @param status - new status
      * @param finalText - override display text for terminal states
      */
-    updateTask(
-        taskId: string,
-        status: 'running' | 'success' | 'error' | 'cancelled',
-        finalText?: string,
-    ) {
+    updateTask(taskId: string, status: Exclude<TaskStatus, 'pending'>, finalText?: string) {
         const task = this.tasks.get(taskId)
 
         if (task) {
@@ -145,7 +84,7 @@ export class Spinner {
             }
 
             if (!isProgressInteractive) {
-                this.renderNonInteractive(taskId, task)
+                this.renderNonInteractive(task)
             }
         }
     }
@@ -162,51 +101,31 @@ export class Spinner {
         if (isProgressInteractive) {
             this.render()
             stderr.write(cursor.show)
-        } else {
-            this.tasks.forEach((task, taskId) => {
-                if (task.status !== 'pending') {
-                    this.renderNonInteractive(taskId, task)
-                }
-            })
         }
     }
 
     /**
-     * Render a task status line in non-interactive mode (CI, piped output).
+     * Print a task's new status as its own line in non-interactive mode (CI,
+     * piped output), where nothing is redrawn.
      *
-     * @param taskId - unique task identifier
      * @param task - current task state
      */
-    private renderNonInteractive(taskId: string, task: TaskState) {
-        const key = `${taskId}-${task.status}`
-
-        if (this.printedTasks.has(key)) {
-            return
-        }
-
-        this.printedTasks.add(key)
-
-        const indentStr = '  '.repeat(this.indent)
+    private renderNonInteractive(task: TaskState) {
         let line = ''
 
         switch (task.status) {
             case 'running': {
-                line = `${indentStr}[RUNNING] ${task.text}`
+                line = `[RUNNING] ${task.text}`
                 break
             }
 
             case 'success': {
-                line = `${indentStr}[SUCCESS] ${task.finalText || task.text}`
+                line = `[SUCCESS] ${task.finalText || task.text}`
                 break
             }
 
             case 'error': {
-                line = `${indentStr}[ERROR] Failed: ${task.text}`
-                break
-            }
-
-            case 'cancelled': {
-                line = `${indentStr}[CANCELLED] ${task.finalText || task.text}`
+                line = `[ERROR] Failed: ${task.text}`
                 break
             }
         }
@@ -223,7 +142,6 @@ export class Spinner {
         }
 
         const spinner = SPINNER_FRAMES[this.frameIndex]
-        const indentStr = '  '.repeat(this.indent)
 
         const visibleTasks = [...this.tasks.values()].filter(task => task.status !== 'pending')
 
@@ -234,22 +152,17 @@ export class Spinner {
 
             switch (task.status) {
                 case 'running': {
-                    line = `${indentStr}${blue(spinner)} ${task.text}`
+                    line = `${blue(spinner)} ${task.text}`
                     break
                 }
 
                 case 'success': {
-                    line = `${indentStr}${green(CHECK_MARK)} ${task.finalText || task.text}`
+                    line = `${green(CHECK_MARK)} ${task.finalText || task.text}`
                     break
                 }
 
                 case 'error': {
-                    line = `${indentStr}${red(CROSS_MARK)} Failed: ${task.text}`
-                    break
-                }
-
-                case 'cancelled': {
-                    line = `${indentStr}${gray(CANCEL_MARK)} Cancelled: ${task.finalText || task.text}`
+                    line = `${red(CROSS_MARK)} Failed: ${task.text}`
                     break
                 }
             }
@@ -258,7 +171,6 @@ export class Spinner {
         }
 
         this.previousLineCount = visibleTasks.length
-        this.renderCount++
     }
 }
 

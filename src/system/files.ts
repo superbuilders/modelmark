@@ -1,6 +1,19 @@
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
+import type { Dirent } from 'node:fs'
+
+/**
+ * Order one folder's entries by name, as a plain sort orders strings (not by
+ * locale). Names in one folder are unique, so two never compare equal.
+ * @param a - one entry
+ * @param b - another
+ * @returns negative when a comes first, otherwise positive
+ */
+function byName(a: Dirent, b: Dirent): number {
+    return a.name < b.name ? -1 : 1
+}
+
 /**
  * Find a file under a folder tree, visiting names in reverse order at each
  * level so date-named folders (2026/10/18) are searched newest first.
@@ -18,10 +31,13 @@ export function findFileNewestFirst(
         return undefined
     }
 
-    for (const name of readdirSync(root).toSorted().toReversed()) {
+    const entries = readdirSync(root, { withFileTypes: true }).toSorted(byName).toReversed()
+
+    for (const entry of entries) {
+        const { name } = entry
         const path = join(root, name)
 
-        if (statSync(path).isDirectory()) {
+        if (entry.isDirectory()) {
             const found = depth > 0 ? findFileNewestFirst(path, matches, depth - 1) : undefined
 
             if (found) {

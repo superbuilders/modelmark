@@ -115,6 +115,15 @@ describe('uninstall', () => {
 
         expect(await uninstall()).toBeNull()
     })
+
+    test('leaves a hook that never ran modelmark untouched', async () => {
+        const repo = await enterRepo()
+
+        writeFileSync(hookPath(repo), '#!/bin/sh\nexec other-tool "$@"\n')
+
+        expect(await uninstall()).toBeNull()
+        expect(readFileSync(hookPath(repo), 'utf8')).toBe('#!/bin/sh\nexec other-tool "$@"\n')
+    })
 })
 
 describe('the commands', () => {

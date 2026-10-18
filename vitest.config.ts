@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import { parseCLI } from 'vitest/node'
 
 import { fullGatesAllowed, testRefusal, unscopedTestRun } from './scripts/lib/run-context.ts'
 
@@ -12,7 +13,7 @@ function guardTestRun() {
         return
     }
 
-    const reason = unscopedTestRun(args)
+    const reason = unscopedTestRun(args, parseCLI(['vitest', ...args]).filter)
 
     if (reason !== null) {
         console.error(testRefusal(reason))

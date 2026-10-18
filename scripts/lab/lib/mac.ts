@@ -105,10 +105,10 @@ async function prepare(checkout: string): Promise<string> {
     const version = manifest.packageManager.replace(/^bun@/, '')
     const bun = `${MAC_TOOLCHAIN}/bun-${version}/bun`
 
-    console.error(gray('Mac: copying the checkout'))
+    console.error(gray(`Mac: copying the checkout and installing Bun ${version}`))
     await sshOrFail('setup', `umask 077; mkdir -p ${MAC_CHECKOUT} ${LAB_ROOT}/runs`)
 
-    const sync = await spawn([
+    const sync = spawn([
         'rsync',
         '-az',
         '--delete',
@@ -120,13 +120,13 @@ async function prepare(checkout: string): Promise<string> {
         `${checkout}/`,
         `${macHost()}:${MAC_CHECKOUT}/`,
     ])
+    const [copied] = await Promise.all([sync, sshOrFail('toolchain', toolchainScript(version))])
 
-    if (sync.exitCode !== 0) {
-        throw new Error(`Mac copy failed: ${tail(sync.stderr)}`)
+    if (copied.exitCode !== 0) {
+        throw new Error(`Mac copy failed: ${tail(copied.stderr)}`)
     }
 
-    console.error(gray(`Mac: installing Bun ${version} and dependencies`))
-    await sshOrFail('toolchain', toolchainScript(version))
+    console.error(gray('Mac: installing dependencies'))
     await sshOrFail(
         'dependencies',
         `cd ${MAC_CHECKOUT} && ${bun} install --frozen-lockfile --ignore-scripts >/dev/null`,
