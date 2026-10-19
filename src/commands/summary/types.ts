@@ -19,6 +19,11 @@ export interface HarnessBadge {
 export type SummaryFormat = (typeof SUMMARY_FORMATS)[number]
 
 /**
+ * Badge colors for agents modelmark doesn't know, by agent, as hex without the `#`.
+ */
+export type AgentColors = Readonly<Record<string, string>>
+
+/**
  * How many commits in a range carry one trailer value.
  */
 export interface MarkCount {

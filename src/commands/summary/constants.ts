@@ -28,7 +28,13 @@ export const BADGE_STYLE = 'flat-square'
 /** The dark grey of a badge's name and commit count. */
 export const BADGE_DARK = '30363D'
 
-/** The model and effort colors of a harness modelmark doesn't know. */
+/** How much of each channel an effort piece keeps of its model piece's color, for an agent given a color. */
+export const EFFORT_SHADE = 0.75
+
+/** A badge color as `--color` takes it: six hex digits, without the `#`. */
+export const HEX_COLOR = /^[\da-f]{6}$/i
+
+/** The model and effort colors of a harness modelmark doesn't know and wasn't given a color for. */
 export const UNKNOWN_HARNESS_COLORS = { color: '6E7781', effortColor: '4F565D' } as const
 
 /** The lighter grey of the count on the badge for commits with no mark. */

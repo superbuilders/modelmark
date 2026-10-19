@@ -12,7 +12,7 @@ import {
 } from './constants'
 import { commitsText } from './words'
 
-import type { Summary, SummaryFormat } from './types'
+import type { AgentColors, Summary, SummaryFormat } from './types'
 
 /**
  * Count the marks across a range of commits, skipping merges.
@@ -152,9 +152,15 @@ export function summaryTable(summary: Summary): string {
  * @param format - how to print it
  * @param range - the range covered
  * @param summary - its counts
+ * @param colors - badge colors for agents modelmark doesn't know
  * @returns the output
  */
-function formatSummary(format: SummaryFormat, range: string, summary: Summary): string {
+function formatSummary(
+    format: SummaryFormat,
+    range: string,
+    summary: Summary,
+    colors: AgentColors,
+): string {
     switch (format) {
         case 'json': {
             return JSON.stringify({ range, ...summary })
@@ -165,7 +171,7 @@ function formatSummary(format: SummaryFormat, range: string, summary: Summary): 
         }
 
         case 'badges': {
-            return summaryBadges(summary)
+            return summaryBadges(summary, colors)
         }
 
         default: {
@@ -180,12 +186,17 @@ function formatSummary(format: SummaryFormat, range: string, summary: Summary): 
  * @param options - output options
  * @param options.format - how to print the summary
  * @param options.json - shorthand for `format: 'json'`
+ * @param options.color - badge colors for agents modelmark doesn't know
  */
 export async function summaryCommand(
     range: string | undefined,
-    { format = 'text', json = false }: { format?: SummaryFormat; json?: boolean },
+    {
+        format = 'text',
+        json = false,
+        color = {},
+    }: { format?: SummaryFormat; json?: boolean; color?: AgentColors },
 ): Promise<void> {
     const covered = range ?? (await defaultRange())
 
-    console.log(formatSummary(json ? 'json' : format, covered, await summarize(covered)))
+    console.log(formatSummary(json ? 'json' : format, covered, await summarize(covered), color))
 }

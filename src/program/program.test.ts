@@ -39,3 +39,24 @@ test('summary prints the format asked for, and refuses --json with --format', as
         }),
     ).rejects.toThrow(/cannot be used with option '--format/)
 })
+
+test('summary takes --color for an agent it does not know, and refuses a bad one', async () => {
+    const program = buildProgram().exitOverride()
+
+    program.commands.forEach(command =>
+        command.exitOverride().configureOutput({ writeErr: () => {} }),
+    )
+
+    const summary = program.commands.find(command => command.name() === 'summary')
+
+    summary?.action(() => {})
+    await program.parseAsync(['summary', '--color', 'jojo=#e73a2c', '--color', 'bot=112233'], {
+        from: 'user',
+    })
+
+    expect(summary?.opts().color).toEqual({ jojo: 'E73A2C', bot: '112233' })
+
+    await expect(
+        program.parseAsync(['summary', '--color', 'jojo=red'], { from: 'user' }),
+    ).rejects.toThrow(/expected <agent>=<hex color>/)
+})

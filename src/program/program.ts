@@ -1,11 +1,30 @@
-import { Command, Option } from 'commander'
+import { Command, InvalidArgumentError, Option } from 'commander'
 
 import { version } from '../../package.json'
 import { doctorCommand } from '../commands/doctor/doctor'
 import { hookCommand } from '../commands/hook/hook'
 import { installCommand, uninstallCommand } from '../commands/install/install'
-import { SUMMARY_FORMATS } from '../commands/summary/constants'
+import { HEX_COLOR, SUMMARY_FORMATS } from '../commands/summary/constants'
 import { summaryCommand } from '../commands/summary/summary'
+
+import type { AgentColors } from '../commands/summary/types'
+
+/**
+ * Add one `--color agent=hex` to the colors given so far.
+ * @param value - the option's value, such as `jojo=E73A2C`
+ * @param previous - the colors from earlier `--color` options
+ * @returns the colors with this one added
+ */
+function addColor(value: string, previous: AgentColors): AgentColors {
+    const [agent = '', hex = ''] = value.split('=')
+    const color = hex.replace(/^#/, '')
+
+    if (!agent || !HEX_COLOR.test(color)) {
+        throw new InvalidArgumentError('expected <agent>=<hex color>, such as jojo=E73A2C')
+    }
+
+    return { ...previous, [agent]: color.toUpperCase() }
+}
 
 /**
  * Build the modelmark command line.
@@ -46,6 +65,14 @@ export function buildProgram(): Command {
                 .default('text'),
         )
         .addOption(new Option('--json', 'shorthand for --format json').conflicts('format'))
+        .addOption(
+            new Option(
+                '--color <agent=hex>',
+                'a badge color for an agent modelmark doesn’t know, such as jojo=E73A2C (repeatable)',
+            )
+                .argParser(addColor)
+                .default({}, 'none'),
+        )
         .action(summaryCommand)
 
     program

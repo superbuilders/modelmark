@@ -37,6 +37,23 @@ describe('summaryBadges', () => {
         expect(summaryBadges({ total: 2, unmarked: 2, marks: [] })).toBe('')
     })
 
+    test('colors an agent it was given a color for, with a darker effort', () => {
+        const html = summaryBadges(
+            { total: 2, unmarked: 0, marks: [{ mark: 'jojo:claude-opus-5-5@medium', commits: 2 }] },
+            { jojo: 'E73A2C' },
+        )
+        const paths = [...html.matchAll(/src="([^"]*)"/g)].map(
+            ([, src]) => new URL(src ?? '').pathname,
+        )
+
+        expect(paths).toEqual([
+            '/badge/jojo-30363D',
+            '/badge/claude--opus--5--5-E73A2C',
+            '/badge/medium-AD2C21',
+            '/badge/2_commits-30363D',
+        ])
+    })
+
     test("escapes shields.io's separators and gives each harness its logo", () => {
         const html = summaryBadges({
             total: 2,
