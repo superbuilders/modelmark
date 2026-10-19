@@ -1,3 +1,10 @@
+import type { SUMMARY_FORMATS } from './constants'
+
+/**
+ * A way `summary` can print.
+ */
+export type SummaryFormat = (typeof SUMMARY_FORMATS)[number]
+
 /**
  * How many commits in a range carry one trailer value.
  */

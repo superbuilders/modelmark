@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import { git } from '../../system/command'
-import { defaultRange, summarize, summaryCommand, summaryMarkdown } from './summary'
+import { defaultRange, summarize, summaryCommand, summaryTable } from './summary'
 
 /**
  * Make a repository with a `base` commit, then one empty commit per message.
@@ -173,9 +173,9 @@ describe('summaryCommand', () => {
     })
 })
 
-describe('summaryMarkdown', () => {
+describe('summaryTable', () => {
     test('splits each mark into harness, model and effort, with unmarked commits last', () => {
-        const markdown = summaryMarkdown({
+        const markdown = summaryTable({
             total: 5,
             unmarked: 1,
             marks: [

@@ -23,7 +23,7 @@ bun run knip                               # Compact unused-code report; config 
 bun src/cli.ts --version                   # Package version
 bun src/cli.ts install|uninstall           # Add or remove the hook (node_modules line when package.json lists modelmark)
 bun src/cli.ts doctor [--json]             # Check the setup and show the mark a commit would get
-bun src/cli.ts summary [range] [--json|--markdown]  # Count trailers across commits (default: this branch's)
+bun src/cli.ts summary [range] [--format F] # Count trailers across commits (default: this branch's); F is text, json, table or badges
 bun src/cli.ts hook <msg-file> [source]    # Hidden: what the hook runs to append the trailer
 bun run bump                               # Release: bump the version, commit, tag v<version>, push
 bun scripts/lab list|run|status|probe      # Real-harness checks, here and on the Mac (scripts/lab/README.md)

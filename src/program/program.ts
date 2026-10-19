@@ -4,6 +4,7 @@ import { version } from '../../package.json'
 import { doctorCommand } from '../commands/doctor/doctor'
 import { hookCommand } from '../commands/hook/hook'
 import { installCommand, uninstallCommand } from '../commands/install/install'
+import { SUMMARY_FORMATS } from '../commands/summary/constants'
 import { summaryCommand } from '../commands/summary/summary'
 
 /**
@@ -39,10 +40,12 @@ export function buildProgram(): Command {
             '[range]',
             'a git revision range (default: this branch’s commits not on the default branch)',
         )
-        .option('--json', 'print the summary as JSON')
         .addOption(
-            new Option('--markdown', 'print a Markdown table for a pull request').conflicts('json'),
+            new Option('--format <format>', 'how to print the summary')
+                .choices(SUMMARY_FORMATS)
+                .default('text'),
         )
+        .addOption(new Option('--json', 'shorthand for --format json').conflicts('format'))
         .action(summaryCommand)
 
     program

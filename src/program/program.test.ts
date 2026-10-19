@@ -12,12 +12,20 @@ test('the summary command is wired to its handler', async () => {
     )
 })
 
-test('summary prints Markdown, and refuses --markdown with --json', async () => {
+test('summary prints the format asked for, and refuses --json with --format', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
 
-    await buildProgram().parseAsync(['summary', 'HEAD..HEAD', '--markdown'], { from: 'user' })
+    await buildProgram().parseAsync(['summary', 'HEAD..HEAD', '--format', 'table'], {
+        from: 'user',
+    })
 
     expect(String(log.mock.calls.at(-1)?.[0])).toContain('| Harness | Model | Effort | Commits |')
+
+    await buildProgram().parseAsync(['summary', 'HEAD~1..HEAD', '--format', 'badges'], {
+        from: 'user',
+    })
+
+    expect(String(log.mock.calls.at(-1)?.[0])).toMatch(/^<img alt=/)
 
     const program = buildProgram().exitOverride()
 
@@ -26,6 +34,8 @@ test('summary prints Markdown, and refuses --markdown with --json', async () => 
     )
 
     await expect(
-        program.parseAsync(['summary', 'HEAD..HEAD', '--json', '--markdown'], { from: 'user' }),
-    ).rejects.toThrow(/cannot be used with option '--json'/)
+        program.parseAsync(['summary', 'HEAD..HEAD', '--json', '--format', 'table'], {
+            from: 'user',
+        }),
+    ).rejects.toThrow(/cannot be used with option '--format/)
 })

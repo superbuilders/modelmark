@@ -2,6 +2,7 @@ import { HARNESS_NAMES, TRAILER_KEY } from '../../agents/constants'
 import { parseMark } from '../../agents/mark'
 import { git, runCommand } from '../../system/command'
 import { markdownTable } from '../../system/markdown'
+import { summaryBadges } from './badges'
 import {
     COMMIT_SEPARATOR,
     DEFAULT_BRANCHES,
@@ -9,9 +10,10 @@ import {
     NO_MARK_ROW,
     VALUE_SEPARATOR,
 } from './constants'
+import { commitsText } from './words'
 
 import type { AgentId } from '../../agents/types'
-import type { Summary } from './types'
+import type { Summary, SummaryFormat } from './types'
 
 /**
  * Count the marks across a range of commits, skipping merges.
@@ -105,15 +107,6 @@ export async function defaultRange(cwd?: string): Promise<string> {
 }
 
 /**
- * A count of commits, in words.
- * @param count - how many
- * @returns `1 commit` or `N commits`
- */
-function commitsText(count: number): string {
-    return count === 1 ? '1 commit' : `${count} commits`
-}
-
-/**
  * A harness's name as people write it, or the agent as the mark has it when
  * modelmark doesn't know it.
  * @param agent - the agent from a mark
@@ -145,13 +138,13 @@ function summaryText(range: string, summary: Summary): string {
 }
 
 /**
- * The summary as Markdown for a pull request body or comment: a table with
+ * The summary as a Markdown table for a pull request body or comment, with
  * the harness, model and effort apart. It names no range, because the pull
  * request already says which commits it holds.
  * @param summary - its counts
  * @returns the Markdown
  */
-export function summaryMarkdown(summary: Summary): string {
+export function summaryTable(summary: Summary): string {
     const rows = summary.marks.map(({ mark, commits }) => {
         const { agent, model, effort } = parseMark(mark)
 
@@ -166,24 +159,44 @@ export function summaryMarkdown(summary: Summary): string {
 }
 
 /**
+ * The summary in one of `summary`'s formats.
+ * @param format - how to print it
+ * @param range - the range covered
+ * @param summary - its counts
+ * @returns the output
+ */
+function formatSummary(format: SummaryFormat, range: string, summary: Summary): string {
+    switch (format) {
+        case 'json': {
+            return JSON.stringify({ range, ...summary })
+        }
+
+        case 'table': {
+            return summaryTable(summary)
+        }
+
+        case 'badges': {
+            return summaryBadges(summary)
+        }
+
+        case 'text': {
+            return summaryText(range, summary)
+        }
+    }
+}
+
+/**
  * Print the marks across a range.
  * @param range - a git revision range (default: this branch's commits not on the default branch)
  * @param options - output options
- * @param options.json - print the summary as JSON
- * @param options.markdown - print the summary as a Markdown table
+ * @param options.format - how to print the summary
+ * @param options.json - shorthand for `format: 'json'`
  */
 export async function summaryCommand(
     range: string | undefined,
-    { json = false, markdown = false }: { json?: boolean; markdown?: boolean },
+    { format = 'text', json = false }: { format?: SummaryFormat; json?: boolean },
 ): Promise<void> {
     const covered = range ?? (await defaultRange())
-    const summary = await summarize(covered)
 
-    if (json) {
-        console.log(JSON.stringify({ range: covered, ...summary }))
-    } else if (markdown) {
-        console.log(summaryMarkdown(summary))
-    } else {
-        console.log(summaryText(covered, summary))
-    }
+    console.log(formatSummary(json ? 'json' : format, covered, await summarize(covered)))
 }
