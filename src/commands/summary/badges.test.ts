@@ -33,6 +33,10 @@ describe('summaryBadges', () => {
         ])
     })
 
+    test('draws nothing when no commit has a mark', () => {
+        expect(summaryBadges({ total: 2, unmarked: 2, marks: [] })).toBe('')
+    })
+
     test("escapes shields.io's separators and gives each harness its logo", () => {
         const html = summaryBadges({
             total: 2,

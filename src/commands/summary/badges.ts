@@ -76,11 +76,16 @@ function markBadge(mark: string, commits: number): string {
 
 /**
  * The summary as shields.io badges for a pull request: one badge per mark,
- * then one for commits with no mark, a line each.
+ * then one for commits with no mark, a line each. Commits with no mark at all
+ * get no badges, since they say nothing about who made them.
  * @param summary - its counts
- * @returns the HTML, for Markdown
+ * @returns the HTML, for Markdown, or empty when no commit has a mark
  */
 export function summaryBadges(summary: Summary): string {
+    if (summary.marks.length === 0) {
+        return ''
+    }
+
     const badges = summary.marks.map(({ mark, commits }) => markBadge(mark, commits))
 
     if (summary.unmarked > 0) {
