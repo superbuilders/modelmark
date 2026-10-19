@@ -4,19 +4,6 @@
 export type AgentId = 'claude-code' | 'codex' | 'pi'
 
 /**
- * How a harness's badge looks: its colors, and its logo, either from the
- * Simple Icons set shields.io draws from or as SVG markup.
- */
-export interface HarnessBadge {
-    /** The model piece's color, as hex without the `#`. */
-    color: string
-    /** The effort piece's color: a darker shade of `color`. */
-    effortColor: string
-    /** The logo beside the harness's name. */
-    logo: { simpleIcon: string } | { svg: string }
-}
-
-/**
  * How the agent was found: walking up the process tree, or (when the walk
  * could not see far enough) the markers the agent leaves in the environment.
  */

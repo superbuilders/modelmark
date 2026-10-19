@@ -1,6 +1,19 @@
 import type { SUMMARY_FORMATS } from './constants'
 
 /**
+ * How a harness's badge looks: its colors, and its logo, either from the
+ * Simple Icons set shields.io draws from or as SVG markup.
+ */
+export interface HarnessBadge {
+    /** The model piece's color, as hex without the `#`. */
+    color: string
+    /** The effort piece's color: a darker shade of `color`. */
+    effortColor: string
+    /** The logo beside the harness's name. */
+    logo: { simpleIcon: string } | { svg: string }
+}
+
+/**
  * A way `summary` can print.
  */
 export type SummaryFormat = (typeof SUMMARY_FORMATS)[number]

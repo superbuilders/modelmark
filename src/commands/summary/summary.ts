@@ -1,4 +1,4 @@
-import { HARNESS_NAMES, TRAILER_KEY } from '../../agents/constants'
+import { TRAILER_KEY } from '../../agents/constants'
 import { parseMark } from '../../agents/mark'
 import { git, runCommand } from '../../system/command'
 import { markdownTable } from '../../system/markdown'
@@ -10,9 +10,8 @@ import {
     NO_MARK_ROW,
     VALUE_SEPARATOR,
 } from './constants'
-import { commitsText } from './words'
+import { commitsText, harnessName } from './words'
 
-import type { AgentId } from '../../agents/types'
 import type { Summary, SummaryFormat } from './types'
 
 /**
@@ -104,16 +103,6 @@ export async function defaultRange(cwd?: string): Promise<string> {
     }
 
     return `${base}..HEAD`
-}
-
-/**
- * A harness's name as people write it, or the agent as the mark has it when
- * modelmark doesn't know it.
- * @param agent - the agent from a mark
- * @returns the name
- */
-function harnessName(agent: string): string {
-    return Object.hasOwn(HARNESS_NAMES, agent) ? HARNESS_NAMES[agent as AgentId] : agent
 }
 
 /**

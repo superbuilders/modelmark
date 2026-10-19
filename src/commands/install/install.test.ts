@@ -61,27 +61,19 @@ describe('install', () => {
         expect(statSync(hookPath(repo)).mode & 0o111).toBe(0o111)
     })
 
-    test("writes Husky's hook into .husky, creating the folder", async () => {
-        const repo = await enterRepo('.husky/_')
+    test.each(['.husky', '.config/husky'])(
+        "writes Husky's hook into %s, creating the folder",
+        async folder => {
+            const repo = await enterRepo(`${folder}/_`)
 
-        const { hook } = await install()
+            const { hook } = await install()
 
-        expect(hook.husky).toBe(true)
-        expect(readFileSync(join(repo, '.husky', 'prepare-commit-msg'), 'utf8')).toContain(
-            HOOK_LINE,
-        )
-    })
-
-    test("finds Husky's folder when the repository names its own", async () => {
-        const repo = await enterRepo('.config/husky/_')
-
-        const { hook } = await install()
-
-        expect(hook.husky).toBe(true)
-        expect(
-            readFileSync(join(repo, '.config', 'husky', 'prepare-commit-msg'), 'utf8'),
-        ).toContain(HOOK_LINE)
-    })
+            expect(hook.husky).toBe(true)
+            expect(readFileSync(join(repo, folder, 'prepare-commit-msg'), 'utf8')).toContain(
+                HOOK_LINE,
+            )
+        },
+    )
 
     test('leaves an installed hook as it is', async () => {
         const repo = await enterRepo()

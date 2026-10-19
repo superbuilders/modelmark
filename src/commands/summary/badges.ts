@@ -1,17 +1,17 @@
-import { HARNESS_BADGES, HARNESS_NAMES } from '../../agents/constants'
 import { parseMark } from '../../agents/mark'
 import {
     BADGE_DARK,
     BADGE_STYLE,
+    HARNESS_BADGES,
     NO_MARK_COUNT_COLOR,
     NO_MARK_ROW,
     SHIELDS_URL,
     UNKNOWN_HARNESS_COLORS,
 } from './constants'
-import { commitsText } from './words'
+import { commitsText, harnessName } from './words'
 
-import type { AgentId, HarnessBadge } from '../../agents/types'
-import type { Summary } from './types'
+import type { AgentId } from '../../agents/types'
+import type { HarnessBadge, Summary } from './types'
 
 /**
  * Text as a shields.io badge path segment, where `-` and `_` are separators.
@@ -65,10 +65,9 @@ function markBadge(mark: string, commits: number): string {
     const { agent, model, effort } = parseMark(mark)
     const known = Object.hasOwn(HARNESS_BADGES, agent) ? (agent as AgentId) : null
     const { color, effortColor } = known ? HARNESS_BADGES[known] : UNKNOWN_HARNESS_COLORS
-    const name = known ? HARNESS_NAMES[known] : agent
 
     return [
-        piece(name, BADGE_DARK, known ? HARNESS_BADGES[known].logo : undefined),
+        piece(harnessName(agent), BADGE_DARK, known ? HARNESS_BADGES[known].logo : undefined),
         piece(model, color),
         effort ? piece(effort, effortColor) : '',
         piece(commitsText(commits), BADGE_DARK),
