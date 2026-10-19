@@ -84,8 +84,6 @@ $ modelmark summary --markdown
 | Claude Code | claude-opus-5-5 | high   | 3       |
 | Codex       | gpt-5.6-terra   | medium | 1       |
 | No mark     |                 |        | 1       |
-
-5 commits in `origin/main..HEAD`
 ```
 
 ## Reading a mark

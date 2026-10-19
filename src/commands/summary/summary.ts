@@ -146,12 +146,12 @@ function summaryText(range: string, summary: Summary): string {
 
 /**
  * The summary as Markdown for a pull request body or comment: a table with
- * the harness, model and effort apart, then the range it covers.
- * @param range - the range covered
+ * the harness, model and effort apart. It names no range, because the pull
+ * request already says which commits it holds.
  * @param summary - its counts
  * @returns the Markdown
  */
-export function summaryMarkdown(range: string, summary: Summary): string {
+export function summaryMarkdown(summary: Summary): string {
     const rows = summary.marks.map(({ mark, commits }) => {
         const { agent, model, effort } = parseMark(mark)
 
@@ -162,9 +162,7 @@ export function summaryMarkdown(range: string, summary: Summary): string {
         rows.push([NO_MARK_ROW, '', '', String(summary.unmarked)])
     }
 
-    const table = markdownTable(['Harness', 'Model', 'Effort', 'Commits'], rows)
-
-    return `${table}\n\n${commitsText(summary.total)} in \`${range}\``
+    return markdownTable(['Harness', 'Model', 'Effort', 'Commits'], rows)
 }
 
 /**
@@ -184,7 +182,7 @@ export async function summaryCommand(
     if (json) {
         console.log(JSON.stringify({ range: covered, ...summary }))
     } else if (markdown) {
-        console.log(summaryMarkdown(covered, summary))
+        console.log(summaryMarkdown(summary))
     } else {
         console.log(summaryText(covered, summary))
     }

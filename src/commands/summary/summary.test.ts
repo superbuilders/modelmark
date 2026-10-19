@@ -175,7 +175,7 @@ describe('summaryCommand', () => {
 
 describe('summaryMarkdown', () => {
     test('splits each mark into harness, model and effort, with unmarked commits last', () => {
-        const markdown = summaryMarkdown('origin/main..HEAD', {
+        const markdown = summaryMarkdown({
             total: 5,
             unmarked: 1,
             marks: [
@@ -191,8 +191,6 @@ describe('summaryMarkdown', () => {
                 '| Claude Code | claude-opus-5-5 | high   | 3       |',
                 '| other-tool  | some-model      |        | 1       |',
                 '| No mark     |                 |        | 1       |',
-                '',
-                '5 commits in `origin/main..HEAD`',
             ].join('\n'),
         )
     })
