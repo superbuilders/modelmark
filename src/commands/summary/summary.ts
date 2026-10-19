@@ -168,7 +168,7 @@ function formatSummary(format: SummaryFormat, range: string, summary: Summary): 
             return summaryBadges(summary)
         }
 
-        case 'text': {
+        default: {
             return summaryText(range, summary)
         }
     }
