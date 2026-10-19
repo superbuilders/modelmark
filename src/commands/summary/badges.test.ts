@@ -37,14 +37,14 @@ describe('summaryBadges', () => {
         expect(summaryBadges({ total: 2, unmarked: 2, marks: [] })).toBe('')
     })
 
-    test('colors an agent it was given a color for, with a darker effort', () => {
+    test('draws an agent it was given a color and a logo for, with a darker effort', () => {
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg"/>'
         const html = summaryBadges(
             { total: 2, unmarked: 0, marks: [{ mark: 'jojo:claude-opus-5-5@medium', commits: 2 }] },
-            { jojo: 'E73A2C' },
+            { color: { jojo: 'E73A2C' }, logo: { jojo: svg } },
         )
-        const paths = [...html.matchAll(/src="([^"]*)"/g)].map(
-            ([, src]) => new URL(src ?? '').pathname,
-        )
+        const urls = [...html.matchAll(/src="([^"]*)"/g)].map(([, src]) => new URL(src ?? ''))
+        const paths = urls.map(url => url.pathname)
 
         expect(paths).toEqual([
             '/badge/jojo-30363D',
@@ -52,6 +52,9 @@ describe('summaryBadges', () => {
             '/badge/medium-AD2C21',
             '/badge/2_commits-30363D',
         ])
+        expect(urls[0]?.searchParams.get('logo')).toBe(
+            `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`,
+        )
     })
 
     test("escapes shields.io's separators and gives each harness its logo", () => {

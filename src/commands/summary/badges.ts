@@ -12,7 +12,7 @@ import {
 import { commitsText } from './words'
 
 import type { AgentId } from '../../agents/types'
-import type { AgentColors, HarnessBadge, Summary } from './types'
+import type { AgentColors, AgentLogos, AgentStyles, HarnessBadge, Summary } from './types'
 
 /**
  * Text as a shields.io badge path segment, where `-` and `_` are separators.
@@ -88,20 +88,36 @@ function agentColors(agent: string, colors: AgentColors): Omit<HarnessBadge, 'lo
 }
 
 /**
+ * The logo for an agent: its own when modelmark knows it, the one it was
+ * given otherwise, else none.
+ * @param agent - the agent from a mark
+ * @param logos - logos given for agents modelmark doesn't know
+ * @returns the logo, or undefined for none
+ */
+function agentLogo(agent: string, logos: AgentLogos): HarnessBadge['logo'] | undefined {
+    if (Object.hasOwn(HARNESS_BADGES, agent)) {
+        return HARNESS_BADGES[agent as AgentId].logo
+    }
+
+    const given = logos[agent]
+
+    return given ? { svg: given } : undefined
+}
+
+/**
  * One mark's badge: the harness, the model, the effort and the commit count,
  * as pieces with nothing between them so they read as one.
  * @param mark - the trailer value
  * @param commits - how many commits carry it
- * @param colors - colors given for agents modelmark doesn't know
+ * @param styles - colors and logos given for agents modelmark doesn't know
  * @returns the HTML
  */
-function markBadge(mark: string, commits: number, colors: AgentColors): string {
+function markBadge(mark: string, commits: number, styles: AgentStyles): string {
     const { agent, model, effort } = parseMark(mark)
-    const known = Object.hasOwn(HARNESS_BADGES, agent) ? (agent as AgentId) : null
-    const { color, effortColor } = agentColors(agent, colors)
+    const { color, effortColor } = agentColors(agent, styles.color)
 
     return [
-        piece(harnessName(agent), BADGE_DARK, known ? HARNESS_BADGES[known].logo : undefined),
+        piece(harnessName(agent), BADGE_DARK, agentLogo(agent, styles.logo)),
         piece(model, color),
         effort ? piece(effort, effortColor) : '',
         piece(commitsText(commits), BADGE_DARK),
@@ -113,15 +129,18 @@ function markBadge(mark: string, commits: number, colors: AgentColors): string {
  * then one for commits with no mark, a line each. Commits with no mark at all
  * get no badges, since they say nothing about who made them.
  * @param summary - its counts
- * @param colors - colors given for agents modelmark doesn't know
+ * @param styles - colors and logos given for agents modelmark doesn't know
  * @returns the HTML, for Markdown, or empty when no commit has a mark
  */
-export function summaryBadges(summary: Summary, colors: AgentColors = {}): string {
+export function summaryBadges(
+    summary: Summary,
+    styles: AgentStyles = { color: {}, logo: {} },
+): string {
     if (summary.marks.length === 0) {
         return ''
     }
 
-    const badges = summary.marks.map(({ mark, commits }) => markBadge(mark, commits, colors))
+    const badges = summary.marks.map(({ mark, commits }) => markBadge(mark, commits, styles))
 
     if (summary.unmarked > 0) {
         badges.push(

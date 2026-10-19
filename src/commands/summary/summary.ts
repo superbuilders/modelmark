@@ -12,7 +12,7 @@ import {
 } from './constants'
 import { commitsText } from './words'
 
-import type { AgentColors, Summary, SummaryFormat } from './types'
+import type { AgentStyles, Summary, SummaryFormat } from './types'
 
 /**
  * Count the marks across a range of commits, skipping merges.
@@ -152,14 +152,14 @@ export function summaryTable(summary: Summary): string {
  * @param format - how to print it
  * @param range - the range covered
  * @param summary - its counts
- * @param colors - badge colors for agents modelmark doesn't know
+ * @param styles - badge colors and logos for agents modelmark doesn't know
  * @returns the output
  */
 function formatSummary(
     format: SummaryFormat,
     range: string,
     summary: Summary,
-    colors: AgentColors,
+    styles: AgentStyles,
 ): string {
     switch (format) {
         case 'json': {
@@ -171,7 +171,7 @@ function formatSummary(
         }
 
         case 'badges': {
-            return summaryBadges(summary, colors)
+            return summaryBadges(summary, styles)
         }
 
         default: {
@@ -187,6 +187,7 @@ function formatSummary(
  * @param options.format - how to print the summary
  * @param options.json - shorthand for `format: 'json'`
  * @param options.color - badge colors for agents modelmark doesn't know
+ * @param options.logo - badge logos for agents modelmark doesn't know
  */
 export async function summaryCommand(
     range: string | undefined,
@@ -194,9 +195,15 @@ export async function summaryCommand(
         format = 'text',
         json = false,
         color = {},
-    }: { format?: SummaryFormat; json?: boolean; color?: AgentColors },
+        logo = {},
+    }: { format?: SummaryFormat; json?: boolean } & Partial<AgentStyles>,
 ): Promise<void> {
     const covered = range ?? (await defaultRange())
 
-    console.log(formatSummary(json ? 'json' : format, covered, await summarize(covered), color))
+    console.log(
+        formatSummary(json ? 'json' : format, covered, await summarize(covered), {
+            color,
+            logo,
+        }),
+    )
 }

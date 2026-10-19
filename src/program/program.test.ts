@@ -1,3 +1,7 @@
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 import { expect, test, vi } from 'vitest'
 
 import { buildProgram } from './program'
@@ -59,4 +63,30 @@ test('summary takes --color for an agent it does not know, and refuses a bad one
     await expect(
         program.parseAsync(['summary', '--color', 'jojo=red'], { from: 'user' }),
     ).rejects.toThrow(/expected <agent>=<hex color>/)
+})
+
+test('summary reads --logo from an SVG file, and refuses a file that is not one', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'modelmark-logo-'))
+    const logo = join(folder, 'jojo.svg')
+    const text = join(folder, 'notes.txt')
+
+    writeFileSync(logo, '<svg xmlns="http://www.w3.org/2000/svg"/>\n')
+    writeFileSync(text, 'hello')
+
+    const program = buildProgram().exitOverride()
+
+    program.commands.forEach(command =>
+        command.exitOverride().configureOutput({ writeErr: () => {} }),
+    )
+
+    const summary = program.commands.find(command => command.name() === 'summary')
+
+    summary?.action(() => {})
+    await program.parseAsync(['summary', '--logo', `jojo=${logo}`], { from: 'user' })
+
+    expect(summary?.opts().logo).toEqual({ jojo: '<svg xmlns="http://www.w3.org/2000/svg"/>' })
+
+    await expect(
+        program.parseAsync(['summary', '--logo', `jojo=${text}`], { from: 'user' }),
+    ).rejects.toThrow(/expected <agent>=<svg file>/)
 })

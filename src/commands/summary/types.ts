@@ -24,6 +24,21 @@ export type SummaryFormat = (typeof SUMMARY_FORMATS)[number]
 export type AgentColors = Readonly<Record<string, string>>
 
 /**
+ * Badge logos for agents modelmark doesn't know, by agent, as SVG markup drawn white.
+ */
+export type AgentLogos = Readonly<Record<string, string>>
+
+/**
+ * How the badges of agents modelmark doesn't know look, as `summary`'s options give them.
+ */
+export interface AgentStyles {
+    /** Their colors. */
+    color: AgentColors
+    /** Their logos. */
+    logo: AgentLogos
+}
+
+/**
  * How many commits in a range carry one trailer value.
  */
 export interface MarkCount {

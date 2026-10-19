@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { Command, InvalidArgumentError, Option } from 'commander'
 
 import { version } from '../../package.json'
@@ -7,7 +9,7 @@ import { installCommand, uninstallCommand } from '../commands/install/install'
 import { HEX_COLOR, SUMMARY_FORMATS } from '../commands/summary/constants'
 import { summaryCommand } from '../commands/summary/summary'
 
-import type { AgentColors } from '../commands/summary/types'
+import type { AgentColors, AgentLogos } from '../commands/summary/types'
 
 /**
  * Add one `--color agent=hex` to the colors given so far.
@@ -24,6 +26,31 @@ function addColor(value: string, previous: AgentColors): AgentColors {
     }
 
     return { ...previous, [agent]: color.toUpperCase() }
+}
+
+/**
+ * Add one `--logo agent=file` to the logos given so far, reading the file.
+ * @param value - the option's value, such as `jojo=jojo.svg`
+ * @param previous - the logos from earlier `--logo` options
+ * @returns the logos with this one added
+ */
+function addLogo(value: string, previous: AgentLogos): AgentLogos {
+    const split = value.indexOf('=')
+    const agent = value.slice(0, split)
+    const file = value.slice(split + 1)
+    let svg = ''
+
+    try {
+        svg = split > 0 ? readFileSync(file, 'utf8').trim() : ''
+    } catch {
+        throw new InvalidArgumentError(`can't read ${file}`)
+    }
+
+    if (!svg.startsWith('<svg')) {
+        throw new InvalidArgumentError('expected <agent>=<svg file>, such as jojo=jojo.svg')
+    }
+
+    return { ...previous, [agent]: svg }
 }
 
 /**
@@ -71,6 +98,14 @@ export function buildProgram(): Command {
                 'a badge color for an agent modelmark doesn’t know, such as jojo=E73A2C (repeatable)',
             )
                 .argParser(addColor)
+                .default({}, 'none'),
+        )
+        .addOption(
+            new Option(
+                '--logo <agent=file>',
+                'a white SVG logo for an agent modelmark doesn’t know, such as jojo=jojo.svg (repeatable)',
+            )
+                .argParser(addLogo)
                 .default({}, 'none'),
         )
         .action(summaryCommand)
