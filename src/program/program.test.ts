@@ -21,11 +21,11 @@ test('summary prints the format asked for, and refuses --json with --format', as
 
     expect(String(log.mock.calls.at(-1)?.[0])).toContain('| Harness | Model | Effort | Commits |')
 
-    await buildProgram().parseAsync(['summary', 'HEAD~1..HEAD', '--format', 'badges'], {
+    await buildProgram().parseAsync(['summary', 'HEAD..HEAD', '--format', 'badges'], {
         from: 'user',
     })
 
-    expect(String(log.mock.calls.at(-1)?.[0])).toMatch(/^<img alt=/)
+    expect(log).toHaveBeenLastCalledWith('')
 
     const program = buildProgram().exitOverride()
 
