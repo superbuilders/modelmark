@@ -72,6 +72,17 @@ describe('install', () => {
         )
     })
 
+    test("finds Husky's folder when the repository names its own", async () => {
+        const repo = await enterRepo('.config/husky/_')
+
+        const { hook } = await install()
+
+        expect(hook.husky).toBe(true)
+        expect(
+            readFileSync(join(repo, '.config', 'husky', 'prepare-commit-msg'), 'utf8'),
+        ).toContain(HOOK_LINE)
+    })
+
     test('leaves an installed hook as it is', async () => {
         const repo = await enterRepo()
 

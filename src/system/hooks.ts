@@ -18,8 +18,9 @@ interface PackageManifest {
 
 /**
  * Find where this repository's prepare-commit-msg hook lives. Husky points
- * `core.hooksPath` at `.husky/_` and runs the scripts in `.husky/` itself,
- * so a Husky repository's hook is `.husky/prepare-commit-msg`.
+ * `core.hooksPath` at `_` inside its folder (`.husky/_` unless the repository
+ * names another) and runs the scripts in that folder itself, so a Husky
+ * repository's hook is `.husky/prepare-commit-msg`.
  * @param cwd - a folder inside the repository (default: this process's)
  * @returns the hook file, and whether it is installed there
  */
@@ -29,7 +30,7 @@ export async function findHookFile(cwd?: string): Promise<HookFile> {
         cwd,
     )
     const [root = '', hooks = ''] = output.trim().split('\n')
-    const husky = basename(hooks) === '_' && basename(dirname(hooks)) === '.husky'
+    const husky = basename(hooks) === '_'
     const path = join(husky ? dirname(hooks) : hooks, HOOK_NAME)
 
     return { path, root, husky, text: await readFile(path, 'utf8').catch(() => null) }
