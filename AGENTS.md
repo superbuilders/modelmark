@@ -116,6 +116,9 @@ from one `ps` call. Environment markers are only a fallback when the walk is
 blocked, because they outlive their agent: a terminal opened from an agent, or
 an agent started inside another, inherits them. Codex's sandbox hides its
 parent processes, so its sandbox markers name it when the walk tops out.
+An agent modelmark doesn't know names itself in `MODELMARK` (a whole mark,
+`jojo:gpt-6.1-sol@high`). It wins over the markers but not over a supported
+harness in the process tree, since a command run inside one inherits it.
 
 The model comes from the agent's own session log, read from its end
 (`system/tail.ts`), never from the model: Claude Code's

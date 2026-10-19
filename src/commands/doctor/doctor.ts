@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 import { HARNESS_COMMANDS, HARNESS_NAMES, PLATFORM_NAMES } from '../../agents/constants'
-import { detect, markTrailer } from '../../agents/mark'
+import { detect, harnessName, markTrailer } from '../../agents/mark'
 import {
     currentPlatform,
     installedVersion,
@@ -20,6 +20,7 @@ import type { Check, DoctorFacts } from './types'
 const VIA_TEXT = {
     'process-tree': 'in the process tree',
     environment: 'from its environment variables (the process tree was cut short)',
+    declared: 'from MODELMARK',
 } as const
 
 /**
@@ -102,7 +103,7 @@ function agentChecks(facts: DoctorFacts): Check[] {
 
     const found: Check = {
         level: 'ok',
-        text: `Found ${HARNESS_NAMES[detection.agent]} ${VIA_TEXT[detection.via]}`,
+        text: `Found ${harnessName(detection.agent)} ${VIA_TEXT[detection.via]}`,
     }
 
     if (detection.model === null) {

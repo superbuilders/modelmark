@@ -1,4 +1,4 @@
-import { parseMark } from '../../agents/mark'
+import { harnessName, parseMark } from '../../agents/mark'
 import {
     BADGE_DARK,
     BADGE_STYLE,
@@ -8,7 +8,7 @@ import {
     SHIELDS_URL,
     UNKNOWN_HARNESS_COLORS,
 } from './constants'
-import { commitsText, harnessName } from './words'
+import { commitsText } from './words'
 
 import type { AgentId } from '../../agents/types'
 import type { HarnessBadge, Summary } from './types'

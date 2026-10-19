@@ -122,6 +122,19 @@ Assisted-by: claude-code:claude-opus-5-5@high
 `CLAUDE_CONFIG_DIR` and `CODEX_HOME` move those folders, and modelmark follows
 them.
 
+### Other agents
+
+An agent modelmark doesn't know can name itself. Set `MODELMARK` to its mark in
+the environment its shell commands run in, and its commits get that mark:
+
+```sh
+MODELMARK=jojo:gpt-6.1-sol@high
+```
+
+The model and the effort are optional (`MODELMARK=jojo` works). A supported
+harness found in the process tree still wins, since a command run inside it
+inherits the variable.
+
 ### Tested versions
 
 The newest version of each harness that passed every

@@ -1,12 +1,40 @@
 import { readProcessTable } from '../system/processes'
-import { AGENT_SEPARATOR, EFFORT_SEPARATOR, TRAILER_KEY, UNKNOWN_MODEL } from './constants'
+import {
+    AGENT_SEPARATOR,
+    DECLARED_MARK,
+    EFFORT_SEPARATOR,
+    HARNESS_NAMES,
+    TRAILER_KEY,
+    UNKNOWN_MODEL,
+} from './constants'
 import { findAgent } from './detect'
 import { readModelUse } from './models'
 
-import type { Detection, Env, MarkParts } from './types'
+import type { AgentId, Detection, Env, MarkParts } from './types'
+
+/**
+ * The mark an agent modelmark doesn't know declares in `MODELMARK`.
+ * @param env - the environment
+ * @returns the detection, or null when none is declared
+ */
+function declaredMark(env: Env): Detection | null {
+    const value = env[DECLARED_MARK]?.trim()
+
+    if (!value) {
+        return null
+    }
+
+    const { agent, model, effort } = parseMark(value)
+
+    return agent ? { agent, via: 'declared', model: model || null, effort: effort || null } : null
+}
 
 /**
  * Find the agent running this command, and the model and effort behind its latest reply.
+ *
+ * A known agent in the process tree wins over a declared mark, which an inner
+ * process inherits like any other variable; a declared mark wins over the
+ * environment markers known agents leave.
  * @param env - the environment (default: this process's)
  * @param startPid - where the process walk starts (default: this process's parent)
  * @returns the detection, or null when no agent is running this command
@@ -16,6 +44,11 @@ export async function detect(
     startPid = process.ppid,
 ): Promise<Detection | null> {
     const found = findAgent(await readProcessTable(), startPid, env)
+    const declared = declaredMark(env)
+
+    if (declared && found?.via !== 'process-tree') {
+        return declared
+    }
 
     return found ? { ...found, ...readModelUse(found.agent, env) } : null
 }
@@ -57,4 +90,14 @@ export function parseMark(value: string): MarkParts {
     }
 
     return { agent, model: rest.slice(0, at), effort: rest.slice(at + EFFORT_SEPARATOR.length) }
+}
+
+/**
+ * A harness's name as people write it, or the agent as the mark has it when
+ * modelmark doesn't know it.
+ * @param agent - the agent from a mark
+ * @returns the name
+ */
+export function harnessName(agent: string): string {
+    return Object.hasOwn(HARNESS_NAMES, agent) ? HARNESS_NAMES[agent as AgentId] : agent
 }

@@ -29,6 +29,9 @@ export const SCRIPT_RUNTIMES: readonly string[] = ['node', 'nodejs', 'bun']
 /** A process tree deeper than this is treated as a loop. */
 export const MAX_TREE_DEPTH = 64
 
+/** The variable an agent modelmark doesn't know sets to name itself, holding a mark such as `jojo:gpt-6.1-sol@high`. */
+export const DECLARED_MARK = 'MODELMARK'
+
 /** The commit trailer modelmark writes, following the Linux kernel's convention. */
 export const TRAILER_KEY = 'Assisted-by'
 

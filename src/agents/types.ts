@@ -4,10 +4,11 @@
 export type AgentId = 'claude-code' | 'codex' | 'pi'
 
 /**
- * How the agent was found: walking up the process tree, or (when the walk
- * could not see far enough) the markers the agent leaves in the environment.
+ * How the agent was found: walking up the process tree, (when the walk could
+ * not see far enough) the markers the agent leaves in the environment, or the
+ * mark an agent modelmark doesn't know declares for itself.
  */
-export type DetectionSource = 'process-tree' | 'environment'
+export type DetectionSource = 'process-tree' | 'environment' | 'declared'
 
 /**
  * Environment variables, as process.env holds them.
@@ -21,7 +22,7 @@ export interface FoundAgent {
     /** Which agent. */
     agent: AgentId
     /** How it was found. */
-    via: DetectionSource
+    via: Exclude<DetectionSource, 'declared'>
 }
 
 /**
@@ -35,9 +36,15 @@ export interface ModelUse {
 }
 
 /**
- * The agent running this command and the model behind its latest reply.
+ * The agent running this command and the model behind its latest reply. The
+ * agent is a plain string because one modelmark doesn't know can declare itself.
  */
-export type Detection = FoundAgent & ModelUse
+export interface Detection extends ModelUse {
+    /** The agent, such as `claude-code`. */
+    agent: string
+    /** How it was found. */
+    via: DetectionSource
+}
 
 /**
  * A mark read back from a commit, split into its parts. The agent is a plain

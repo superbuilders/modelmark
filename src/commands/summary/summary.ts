@@ -1,5 +1,5 @@
 import { TRAILER_KEY } from '../../agents/constants'
-import { parseMark } from '../../agents/mark'
+import { harnessName, parseMark } from '../../agents/mark'
 import { git, runCommand } from '../../system/command'
 import { markdownTable } from '../../system/markdown'
 import { summaryBadges } from './badges'
@@ -10,7 +10,7 @@ import {
     NO_MARK_ROW,
     VALUE_SEPARATOR,
 } from './constants'
-import { commitsText, harnessName } from './words'
+import { commitsText } from './words'
 
 import type { Summary, SummaryFormat } from './types'
 
