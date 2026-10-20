@@ -1,39 +1,28 @@
-import { TRAILER_KEY } from '../../agents/constants'
 import { harnessName, parseMark } from '../../agents/mark'
 import { git, runCommand } from '../../system/command'
 import { markdownTable } from '../../system/markdown'
 import { summaryBadges } from './badges'
-import {
-    COMMIT_SEPARATOR,
-    DEFAULT_BRANCHES,
-    NO_MARK,
-    NO_MARK_ROW,
-    VALUE_SEPARATOR,
-} from './constants'
+import { COMMIT_SEPARATOR, DEFAULT_BRANCHES, NO_MARK, NO_MARK_ROW } from './constants'
+import { MARK_LINE } from './patterns'
 import { commitsText } from './words'
 
 import type { AgentStyles, Summary, SummaryFormat } from './types'
 
 /**
- * Count the marks across a range of commits, skipping merges.
+ * Count the marks across a range of commits, skipping merges. A squashed
+ * commit counts once for each mark its body holds.
  * @param range - a git revision range, such as `main..HEAD`
  * @param cwd - the repository (default: this process's folder)
  * @returns the counts
  */
 export async function summarize(range: string, cwd?: string): Promise<Summary> {
-    const format = `--format=${COMMIT_SEPARATOR}%(trailers:key=${TRAILER_KEY},valueonly,separator=${VALUE_SEPARATOR})`
-    const output = await git(['log', '--no-merges', format, range], cwd)
+    const output = await git(['log', '--no-merges', `--format=${COMMIT_SEPARATOR}%B`, range], cwd)
     const commits = output.split(COMMIT_SEPARATOR).slice(1)
     const counts = new Map<string, number>()
     let unmarked = 0
 
     for (const commit of commits) {
-        const marks = new Set(
-            commit
-                .split(VALUE_SEPARATOR)
-                .map(value => value.trim())
-                .filter(Boolean),
-        )
+        const marks = new Set(Array.from(commit.matchAll(MARK_LINE), ([, mark]) => mark.trim()))
 
         if (marks.size === 0) {
             unmarked++

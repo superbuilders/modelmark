@@ -4,9 +4,6 @@ import type { HarnessBadge } from './types'
 /** Starts each commit in `git log` output (ASCII record separator). */
 export const COMMIT_SEPARATOR = '\u001E'
 
-/** Separates one commit's trailer values (ASCII unit separator). */
-export const VALUE_SEPARATOR = '\u001F'
-
 /** Local branches tried, in order, when the repository has no `origin/HEAD`. */
 export const DEFAULT_BRANCHES = ['main', 'master'] as const
 

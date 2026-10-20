@@ -119,6 +119,9 @@ Assisted-by: claude-code:claude-opus-5-5@high
   Usually a harness update moved something (see [Tested versions](#tested-versions)).
 - **No `@effort`:** the agent recorded no effort level.
 - **Two trailers:** a second agent amended the commit, and both are kept.
+- **Squash merges:** a squashed commit keeps each branch commit's mark in the
+  middle of its message. `summary` reads mark lines anywhere in a message, so
+  it counts the squash once for each mark it holds.
 
 ## Supported harnesses
 

@@ -65,6 +65,30 @@ describe('summarize', () => {
         })
     })
 
+    test('counts each mark in a squashed body, once per commit', async () => {
+        const repo = await repoWith([
+            [
+                'Squash (#1)',
+                '* first',
+                'Assisted-by: claude-code:claude-opus-5-5@medium',
+                '* second',
+                'Assisted-by: claude-code:claude-opus-5-5@medium',
+                '* third',
+                'assisted-by: pi:kimi-k3',
+                '* by hand',
+            ].join('\n\n'),
+        ])
+
+        expect(await summarize('base..HEAD', repo)).toEqual({
+            total: 1,
+            unmarked: 0,
+            marks: [
+                { mark: 'claude-code:claude-opus-5-5@medium', commits: 1 },
+                { mark: 'pi:kimi-k3', commits: 1 },
+            ],
+        })
+    })
+
     test('marks with the same count sort by name', async () => {
         const repo = await repoWith([
             'a\n\nAssisted-by: pi:kimi-k3',
