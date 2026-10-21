@@ -7,15 +7,24 @@ import type { Env } from '../system/types'
 import type { AgentId, ModelPrice, PriceList, SessionUse, TokenUse } from './types'
 
 /**
- * A model's prices. A gateway names a model with its own prefix
+ * A model's id in the price list. A gateway names a model with its own prefix
  * (`anthropic-primary/claude-opus-5-5`), so only the part after the last `/`
- * is looked up.
+ * counts.
+ * @param model - the model as a log or a mark names it
+ * @returns the id, such as `claude-opus-5-5`
+ */
+export function modelId(model: string): string {
+    return model.slice(model.lastIndexOf('/') + 1)
+}
+
+/**
+ * A model's prices.
  * @param model - the model as a log names it
  * @param prices - the price list
  * @returns its prices, or undefined when the list doesn't have it
  */
 export function priceOf(model: string, prices: PriceList): ModelPrice | undefined {
-    const id = model.slice(model.lastIndexOf('/') + 1)
+    const id = modelId(model)
 
     return Object.hasOwn(prices, id) ? prices[id] : undefined
 }

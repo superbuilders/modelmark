@@ -123,15 +123,15 @@ describe('prices', () => {
         execFileSync('git', ['init', '-q'], { cwd: repo })
         commit('One\n\nAssisted-by: codex:zz-tiered-1@high')
         commit('Two\n\nAssisted-by: pi:gateway/zz-plain-1\nAssisted-by: jojo:mystery-9')
-        commit('Three\n\nAssisted-by: pi:unknown')
+        commit('Three\n\nAssisted-by: pi:unknown\nAssisted-by: pi:zz-plain-1')
 
         const output = await printed(undefined, { format: 'table' }, cached(), repo)
 
         expect(output.split('\n').map(line => line.split('|')[1]?.trim())).toEqual([
             'Model',
-            '------------------',
-            'gateway/zz-plain-1',
+            '-----------',
             'mystery-9',
+            'zz-plain-1',
             'zz-tiered-1',
             '',
         ])

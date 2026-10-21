@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs'
 
 import { PRICES_FILE, UNKNOWN_MODEL } from '../../agents/constants'
-import { priceOf } from '../../agents/cost'
+import { modelId, priceOf } from '../../agents/cost'
 import { parseMark } from '../../agents/mark'
 import { MARK_LINE } from '../../agents/patterns'
 import { fetchPriceList, loadPriceList } from '../../agents/prices'
@@ -24,7 +24,8 @@ export async function refreshPricesCommand(env = process.env): Promise<void> {
 }
 
 /**
- * The models this repository's commits are marked with.
+ * The models this repository's commits are marked with, each once: a
+ * gateway's prefix (`anthropic-primary/`) is dropped, as costing drops it.
  * @param cwd - the repository (default: this process's folder)
  * @returns the models, sorted, or none outside a repository
  */
@@ -35,9 +36,8 @@ async function markedModels(cwd?: string): Promise<string[]> {
         return []
     }
 
-    const models = Array.from(
-        log.stdout.matchAll(MARK_LINE),
-        ([, mark]) => parseMark(mark.trim()).model,
+    const models = Array.from(log.stdout.matchAll(MARK_LINE), ([, mark]) =>
+        modelId(parseMark(mark.trim()).model),
     )
 
     return [...new Set(models)].filter(model => model && model !== UNKNOWN_MODEL).toSorted()
