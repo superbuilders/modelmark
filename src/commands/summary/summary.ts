@@ -8,7 +8,6 @@ import { summaryBadges } from './badges'
 import { COMMIT_SEPARATOR, DEFAULT_BRANCHES, NO_MARK, NO_MARK_ROW } from './constants'
 import { cachedText, commitsText, costText, newTokensText } from './words'
 
-import type { TokenCounts } from '../../trailers/types'
 import type {
     AgentColors,
     AgentLogos,
@@ -158,15 +157,6 @@ function summaryText(range: string, summary: Summary): string {
 }
 
 /**
- * A mark's Tokens and Cached cells.
- * @param tokens - its tokens, if any commit had a tokens line
- * @returns the two cells, empty when it has no tokens
- */
-function tokenCells(tokens: TokenCounts | undefined): string[] {
-    return tokens ? [newTokensText(tokens), cachedText(tokens)] : ['', '']
-}
-
-/**
  * The summary as a Markdown table for a pull request body or comment, with
  * the harness, model and effort apart, and cost and token columns when any
  * mark has them. It names no range, because the pull request already says
@@ -194,18 +184,12 @@ export function summaryTable(summary: Summary): string {
             effort ?? '',
             String(count.commits),
             ...(costs ? [count.cost === undefined ? '' : costText(count.cost)] : []),
-            ...(tokens ? tokenCells(count.tokens) : []),
+            ...(count.tokens ? [newTokensText(count.tokens), cachedText(count.tokens)] : []),
         ]
     })
 
     if (summary.unmarked > 0) {
-        rows.push([
-            NO_MARK_ROW,
-            '',
-            '',
-            String(summary.unmarked),
-            ...Array.from({ length: headers.length - 4 }, () => ''),
-        ])
+        rows.push([NO_MARK_ROW, '', '', String(summary.unmarked)])
     }
 
     return markdownTable(headers, rows)

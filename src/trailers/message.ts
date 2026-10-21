@@ -24,14 +24,14 @@ export function messageCost(message: string): number | undefined {
 }
 
 /**
- * Add a trailer to a commit message file, in git's trailer block.
+ * Add trailers to a commit message file, in git's trailer block, with one git call.
  * @param messageFile - the file
- * @param trailer - the whole line, such as `Assisted-cost: $1.84`
- * @param ifExists - what to do when the message already has the key
+ * @param trailers - the whole lines, such as `Assisted-cost: $1.84`
+ * @param ifExists - what to do when the message already has a trailer's key
  */
-export async function writeTrailer(
+export async function writeTrailers(
     messageFile: string,
-    trailer: string,
+    trailers: readonly string[],
     ifExists: IfTrailerExists,
 ): Promise<void> {
     await git([
@@ -39,8 +39,7 @@ export async function writeTrailer(
         '--in-place',
         '--if-exists',
         ifExists,
-        '--trailer',
-        trailer,
+        ...trailers.flatMap(trailer => ['--trailer', trailer]),
         messageFile,
     ])
 }

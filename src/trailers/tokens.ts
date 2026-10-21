@@ -6,6 +6,11 @@ import type { TokenCounts } from './types'
 /** No tokens. */
 const NO_TOKENS: TokenCounts = { input: 0, cacheWrite: 0, output: 0, cacheRead: 0 }
 
+/** Each kind by the name the tokens trailer gives it, for reading a line back. */
+const KIND_BY_NAME: Readonly<Record<string, keyof TokenCounts>> = Object.fromEntries(
+    Object.entries(TOKEN_KINDS).map(([kind, name]) => [name, kind as keyof TokenCounts]),
+)
+
 /**
  * Add up token counts.
  * @param counts - the counts, such as each reply's
@@ -52,18 +57,15 @@ export function tokensTrailer(counts: TokenCounts): string {
  * @returns the counts, or undefined when it has no tokens line
  */
 export function messageTokens(message: string): TokenCounts | undefined {
-    const kinds = Object.fromEntries(
-        Object.entries(TOKEN_KINDS).map(([kind, name]) => [name, kind as keyof TokenCounts]),
-    )
-    const lines = Array.from(message.matchAll(TOKENS_LINE), ([, value]) => {
-        const counts = { ...NO_TOKENS }
+    let counts: TokenCounts | undefined
+
+    for (const [, value] of message.matchAll(TOKENS_LINE)) {
+        counts ??= { ...NO_TOKENS }
 
         for (const [, count, name] of value.matchAll(TOKEN_COUNT)) {
-            counts[kinds[name.toLowerCase()]] += Number(count)
+            counts[KIND_BY_NAME[name.toLowerCase()]] += Number(count)
         }
+    }
 
-        return counts
-    })
-
-    return lines.length > 0 ? addTokens(lines) : undefined
+    return counts
 }

@@ -89,10 +89,7 @@ describe('summaryBadges', () => {
             ],
         })
 
-        expect([...html.matchAll(/alt="([^"]*)"/g)].map(([, alt]) => alt).slice(-2)).toEqual([
-            '156k tokens',
-            '~$4.20',
-        ])
+        expect(altTexts(html)[0]?.slice(-2)).toEqual(['156k tokens', '~$4.20'])
         expect(html).toContain('title="156k new tokens, plus 3.1M read from cache"')
     })
 

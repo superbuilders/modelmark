@@ -9,7 +9,7 @@ import { claimPriceRefresh, loadPriceList } from '../../pricing/prices'
 import { hookDisabled } from '../../setup/hooks'
 import { costTrailer } from '../../trailers/cost'
 import { markTrailer } from '../../trailers/mark'
-import { messageCost, writeTrailer } from '../../trailers/message'
+import { messageCost, writeTrailers } from '../../trailers/message'
 import { addTokens, messageTokens, tokensTrailer } from '../../trailers/tokens'
 import { SKIPPED_SOURCES } from './constants'
 
@@ -36,7 +36,7 @@ export async function markMessage(
 
     const trailer = markTrailer(detection)
 
-    await writeTrailer(messageFile, trailer, 'addIfDifferent')
+    await writeTrailers(messageFile, [trailer], 'addIfDifferent')
 
     return trailer
 }
@@ -110,9 +110,7 @@ export async function usageMessage(
 
         trailers.push(tokensTrailer(addTokens(earlier ? [earlier, ...use.uses] : use.uses)))
 
-        for (const trailer of trailers) {
-            await writeTrailer(messageFile, trailer, 'replace')
-        }
+        await writeTrailers(messageFile, trailers, 'replace')
     }
 
     markCounted(agent, use, attempt, env)
