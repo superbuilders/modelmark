@@ -161,7 +161,7 @@ export async function hookCommand(messageFile: string, source?: string): Promise
     }
 
     try {
-        await costMessage(messageFile, detection.agent as AgentId)
+        await costMessage(messageFile, detection.agent)
     } catch (error) {
         console.error(`modelmark: commit left without a cost (${String(error)})`)
     }

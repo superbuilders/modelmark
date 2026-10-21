@@ -2,7 +2,7 @@ import { newestFirst } from '../system/files'
 import { findLast } from '../system/tail'
 import { CLAUDE_SHELL_TOOL, CLAUDE_SYNTHETIC_MODEL, NO_MODEL_USE } from './constants'
 import { claudeCodeLogs, codexLog } from './logs'
-import { stringAt } from './records'
+import { stringAt, valueAt } from './records'
 
 import type { Env } from '../system/types'
 import type { AgentId, ModelUse } from './types'
@@ -38,7 +38,7 @@ function latestClaudeReply(log: string): unknown {
  * @returns true when one of its parts calls the shell tool
  */
 function asksForShell(reply: unknown): boolean {
-    const content = (reply as { message?: { content?: unknown } }).message?.content
+    const content = valueAt(reply, 'message', 'content')
 
     return (
         Array.isArray(content) &&

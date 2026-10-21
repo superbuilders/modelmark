@@ -113,17 +113,14 @@ export async function defaultRange(cwd?: string): Promise<string> {
  * @returns the text
  */
 function summaryText(range: string, summary: Summary): string {
-    const counts: { label: string; commits: number; cost?: number }[] = summary.marks.map(
-        ({ mark, commits, cost }) => ({ label: mark, commits, cost }),
-    )
-
-    if (summary.unmarked > 0) {
-        counts.push({ label: NO_MARK, commits: summary.unmarked })
-    }
+    const counts: MarkCount[] =
+        summary.unmarked > 0
+            ? [...summary.marks, { mark: NO_MARK, commits: summary.unmarked }]
+            : summary.marks
 
     const width = String(summary.total).length
-    const lines = counts.map(({ label, commits, cost }) =>
-        [`  ${String(commits).padStart(width)}  ${label}`, cost === undefined ? '' : costText(cost)]
+    const lines = counts.map(({ mark, commits, cost }) =>
+        [`  ${String(commits).padStart(width)}  ${mark}`, cost === undefined ? '' : costText(cost)]
             .filter(Boolean)
             .join('  '),
     )

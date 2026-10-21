@@ -2,11 +2,11 @@ import { statSync } from 'node:fs'
 
 import { recordsFromEnd } from '../system/tail'
 import { CLAUDE_SYNTHETIC_MODEL, CODEX_KEYS, UNKNOWN_MODEL, USAGE_KEYS } from './constants'
-import { claudeCodeLogs, codexLog, sessionName } from './logs'
+import { claudeCodeLogs, codexLog } from './logs'
 import { countAt, recordTime, stringAt, valueAt } from './records'
 
 import type { Env } from '../system/types'
-import type { AgentId, SessionUse, TokenUse } from './types'
+import type { AgentId, LoggedUse, TokenUse } from './types'
 
 /**
  * Whether a record was written at or before a point in time, so it and every
@@ -46,10 +46,7 @@ function later(a: number | undefined, b: number | undefined): number | undefined
  * @param since - count only replies after this (ms since the epoch), or everything when undefined
  * @returns the replies and the newest one's time, or undefined when there is no session
  */
-function claudeCodeUse(
-    env: Env,
-    since: number | undefined,
-): Omit<SessionUse, 'session'> | undefined {
+function claudeCodeUse(env: Env, since: number | undefined): LoggedUse | undefined {
     const logs = claudeCodeLogs(env)
 
     if (!logs) {
@@ -122,7 +119,7 @@ function claudeCodeUse(
  * @param since - count only replies after this (ms since the epoch), or everything when undefined
  * @returns the replies and the newest one's time, or undefined when there is no thread
  */
-function codexUse(env: Env, since: number | undefined): Omit<SessionUse, 'session'> | undefined {
+function codexUse(env: Env, since: number | undefined): LoggedUse | undefined {
     const log = codexLog(env)
 
     if (!log) {
@@ -183,7 +180,7 @@ function codexUse(env: Env, since: number | undefined): Omit<SessionUse, 'sessio
  * @param since - count only replies after this (ms since the epoch), or everything when undefined
  * @returns the replies and the newest one's time, or undefined when there is no session file
  */
-function piUse(env: Env, since: number | undefined): Omit<SessionUse, 'session'> | undefined {
+function piUse(env: Env, since: number | undefined): LoggedUse | undefined {
     const log = env.PI_SESSION_FILE
 
     if (!log) {
@@ -225,10 +222,7 @@ function piUse(env: Env, since: number | undefined): Omit<SessionUse, 'session'>
 
 /** Each agent's reader. */
 const READERS: Readonly<
-    Record<
-        AgentId,
-        (env: Env, since: number | undefined) => Omit<SessionUse, 'session'> | undefined
-    >
+    Record<AgentId, (env: Env, since: number | undefined) => LoggedUse | undefined>
 > = { 'claude-code': claudeCodeUse, codex: codexUse, pi: piUse }
 
 /**
@@ -243,17 +237,9 @@ export function readSessionUse(
     agent: AgentId,
     env: Env,
     since: number | undefined,
-): SessionUse | undefined {
-    const session = sessionName(agent, env)
-
-    if (!session) {
-        return undefined
-    }
-
+): LoggedUse | undefined {
     try {
-        const use = READERS[agent](env, since)
-
-        return use && { session, ...use }
+        return READERS[agent](env, since)
     } catch {
         return undefined
     }

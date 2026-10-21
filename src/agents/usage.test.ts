@@ -118,7 +118,6 @@ describe('Claude Code', () => {
     test('counts each reply once across the main and subagent logs', () => {
         const use = readSessionUse('claude-code', session(), undefined)
 
-        expect(use?.session).toBe('s1')
         expect(use?.through).toBe(at('11:00'))
         expect(use?.uses).toHaveLength(3)
         expect(use?.uses).toContainEqual({
@@ -226,7 +225,6 @@ describe('Pi', () => {
         ])
 
         expect(readSessionUse('pi', { PI_SESSION_FILE: file }, at('09:00'))).toEqual({
-            session: '2026-10-20_p1',
             through: at('10:00'),
             uses: [
                 {

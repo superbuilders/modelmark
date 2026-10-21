@@ -31,15 +31,19 @@ export interface ModelUse {
 }
 
 /**
- * The agent running this command and the model behind its latest reply. The
- * agent is a plain string because one modelmark doesn't know can declare itself.
+ * An agent modelmark doesn't know, named by the mark it declares.
  */
-export interface Detection extends ModelUse {
-    /** The agent, such as `claude-code`. */
+export interface DeclaredAgent {
+    /** The agent, a plain string because modelmark doesn't know it. */
     agent: string
     /** How it was found. */
-    via: DetectionSource
+    via: Extract<DetectionSource, 'declared'>
 }
+
+/**
+ * The agent running this command and the model behind its latest reply.
+ */
+export type Detection = (FoundAgent | DeclaredAgent) & ModelUse
 
 /**
  * A mark read back from a commit, split into its parts. The agent is a plain
@@ -92,15 +96,21 @@ export interface TokenUse {
 }
 
 /**
- * The replies a session made after a point in time.
+ * The replies an agent's logs hold after a point in time.
  */
-export interface SessionUse {
-    /** The session, named the same across its commits. */
-    session: string
+export interface LoggedUse {
     /** Each reply's tokens. */
     uses: TokenUse[]
     /** When the newest of them was written (ms since the epoch), or undefined when there are none. */
     through: number | undefined
+}
+
+/**
+ * The replies a session made after a point in time.
+ */
+export interface SessionUse extends LoggedUse {
+    /** The session, named the same across its commits. */
+    session: string
 }
 
 /**

@@ -91,7 +91,9 @@ export function usesSinceLastCommit(agent: AgentId, env: Env): SessionUse | unde
 
     const saved = Number(readState(checkpointName(agent, session), env))
 
-    return readSessionUse(agent, env, saved > 0 ? saved : undefined)
+    const use = readSessionUse(agent, env, saved > 0 ? saved : undefined)
+
+    return use && { session, ...use }
 }
 
 /**
