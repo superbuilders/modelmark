@@ -1258,10 +1258,6 @@
         "input": 0.18,
         "output": 0.7
     },
-    "qwen3-asr-flash": {
-        "input": 0.035,
-        "output": 0.035
-    },
     "qwen3-coder-30b-a3b-instruct": {
         "input": 0.45,
         "output": 2.25,
