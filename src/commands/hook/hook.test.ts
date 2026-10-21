@@ -110,7 +110,7 @@ describe('markMessage', () => {
 
 describe('costMessage', () => {
     const PRICES: PriceList = { 'claude-opus-5-5': { input: 4, output: 20 } }
-    const refresh = vi.fn<(unpriced: boolean) => void>()
+    const refresh = vi.fn<() => void>()
 
     /**
      * A Claude Code session with fresh state, and a way to add replies to it.
@@ -225,9 +225,7 @@ describe('costMessage', () => {
 
         reply(100_000)
         expect(await costMessage(path, 'claude-code', env, {}, refresh)).toBeNull()
-        expect(refresh).toHaveBeenLastCalledWith(true)
         expect(await costMessage(path, 'claude-code', env, PRICES, refresh)).toBeNull()
-        expect(refresh).toHaveBeenLastCalledWith(false)
         expect(readFileSync(path, 'utf8')).toBe('One\n')
     })
 })

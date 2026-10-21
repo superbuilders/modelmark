@@ -54,11 +54,10 @@ export async function markMessage(
 /**
  * Start a price refresh in the background when one is due, and note that it
  * started, so the next commits don't start another. The commit doesn't wait.
- * @param unpriced - whether this commit used a model without a price
  * @param env - the environment
  */
-function refreshPricesIfDue(unpriced: boolean, env: Env = process.env): void {
-    if (!priceRefreshDue(env, unpriced)) {
+function refreshPricesIfDue(env: Env = process.env): void {
+    if (!priceRefreshDue(env)) {
         return
     }
 
@@ -80,7 +79,7 @@ function refreshPricesIfDue(unpriced: boolean, env: Env = process.env): void {
  * @param agent - the agent making the commit
  * @param env - the environment (default: this process's)
  * @param prices - the price list (default: the shipped one, updated from the cache, read only when there are replies to price)
- * @param refresh - starts a price refresh if one is due, told whether a model lacked a price
+ * @param refresh - starts a price refresh if one is due
  * @returns the trailer written, or null when the commit gets none
  */
 export async function costMessage(
@@ -88,7 +87,7 @@ export async function costMessage(
     agent: AgentId,
     env: Env = process.env,
     prices?: PriceList,
-    refresh: (unpriced: boolean) => void = unpriced => refreshPricesIfDue(unpriced, env),
+    refresh: () => void = () => refreshPricesIfDue(env),
 ): Promise<string | null> {
     const use = usesSinceLastCommit(agent, env)
 
@@ -119,7 +118,7 @@ export async function costMessage(
     }
 
     markCounted(agent, use, env)
-    refresh(usd === null)
+    refresh()
 
     return trailer
 }

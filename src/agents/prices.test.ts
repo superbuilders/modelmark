@@ -86,20 +86,13 @@ describe('priceRefreshDue', () => {
         return env
     }
 
-    test('a day after the last refresh, or never refreshed', () => {
-        expect(priceRefreshDue(refreshedAgo(), false, now)).toBe(true)
-        expect(priceRefreshDue(refreshedAgo(23 * 3_600_000), false, now)).toBe(false)
-        expect(priceRefreshDue(refreshedAgo(25 * 3_600_000), false, now)).toBe(true)
-    })
-
-    test('an hour after it when a model had no price', () => {
-        expect(priceRefreshDue(refreshedAgo(30 * 60_000), true, now)).toBe(false)
-        expect(priceRefreshDue(refreshedAgo(2 * 3_600_000), true, now)).toBe(true)
+    test('an hour after the last refresh, or never refreshed', () => {
+        expect(priceRefreshDue(refreshedAgo(), now)).toBe(true)
+        expect(priceRefreshDue(refreshedAgo(59 * 60_000), now)).toBe(false)
+        expect(priceRefreshDue(refreshedAgo(61 * 60_000), now)).toBe(true)
     })
 
     test('never when offline', () => {
-        expect(priceRefreshDue({ ...refreshedAgo(), MODELMARK_OFFLINE: '1' }, true, now)).toBe(
-            false,
-        )
+        expect(priceRefreshDue({ ...refreshedAgo(), MODELMARK_OFFLINE: '1' }, now)).toBe(false)
     })
 })

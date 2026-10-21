@@ -10,7 +10,6 @@ import {
     PRICE_REFRESH_MS,
     PRICE_REFRESH_STATE,
     PRICES_FILE,
-    UNPRICED_REFRESH_MS,
 } from './constants'
 
 import type { Env } from '../system/types'
@@ -45,20 +44,19 @@ export function loadPriceList(env: Env): PriceList {
 
 /**
  * Whether a commit should start a price refresh: never when offline, else
- * when the last one is a day old, or an hour old when a model had no price.
+ * when the last one is an hour old.
  * @param env - the environment
- * @param unpriced - whether this commit used a model without a price
  * @param now - the time (ms since the epoch)
  * @returns true when a refresh is due
  */
-export function priceRefreshDue(env: Env, unpriced: boolean, now = Date.now()): boolean {
+export function priceRefreshDue(env: Env, now = Date.now()): boolean {
     if (env[OFFLINE_VARIABLE]) {
         return false
     }
 
     const age = now - Number(readState(PRICE_REFRESH_STATE, env) ?? 0)
 
-    return age > (unpriced ? UNPRICED_REFRESH_MS : PRICE_REFRESH_MS)
+    return age > PRICE_REFRESH_MS
 }
 
 /**

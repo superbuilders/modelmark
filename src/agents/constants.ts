@@ -88,10 +88,7 @@ export const FIRST_PARTY_PROVIDERS = [
 export const OFFLINE_VARIABLE = 'MODELMARK_OFFLINE'
 
 /** How old the last price refresh may be before a commit starts another. */
-export const PRICE_REFRESH_MS = 86_400_000
-
-/** How old the last refresh may be before a commit using a model without a price starts another, since a new model is the likeliest reason. */
-export const UNPRICED_REFRESH_MS = 3_600_000
+export const PRICE_REFRESH_MS = 3_600_000
 
 /** The longest a price refresh waits for models.dev. */
 export const PRICE_FETCH_TIMEOUT_MS = 20_000
