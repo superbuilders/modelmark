@@ -3,8 +3,8 @@
  * each bucket has its own price.
  */
 export interface TokenUse {
-    /** The model as the agent's log names it. */
-    model: string
+    /** The model as the agent's log names it, or null when the log names none. */
+    model: string | null
     /** Input the model read fresh, not from the prompt cache. */
     input: number
     /** Input read back from the prompt cache. */

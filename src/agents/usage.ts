@@ -1,7 +1,6 @@
 import { statSync } from 'node:fs'
 
 import { recordsFromEnd } from '../system/tail'
-import { UNKNOWN_MODEL } from '../trailers/constants'
 import { CLAUDE_SYNTHETIC_MODEL, CODEX_KEYS, USAGE_KEYS } from './constants'
 import { claudeCodeLogs, codexLog } from './logs'
 import { countAt, recordTime, stringAt, valueAt } from './records'
@@ -163,7 +162,7 @@ function codexUse(env: Env, since: number | undefined): LoggedUse | undefined {
         const cacheWrite = countAt(usage, 'cache_write_input_tokens')
 
         uses.push({
-            model: model ?? UNKNOWN_MODEL,
+            model: model ?? null,
             input: Math.max(0, countAt(usage, 'input_tokens') - cacheRead - cacheWrite),
             cacheRead,
             cacheWrite,

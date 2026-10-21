@@ -20,7 +20,7 @@ const PRICES: PriceList = {
  * @param tokens - the counts that aren't zero
  * @returns the reply
  */
-function reply(model: string, tokens: Partial<Omit<TokenUse, 'model'>>): TokenUse {
+function reply(model: string | null, tokens: Partial<Omit<TokenUse, 'model'>>): TokenUse {
     return { model, input: 0, cacheRead: 0, cacheWrite: 0, output: 0, ...tokens }
 }
 
@@ -63,6 +63,10 @@ describe('usesCost', () => {
                 PRICES,
             ),
         ).toBeNull()
+    })
+
+    test('a reply whose log names no model makes the whole cost unknown', () => {
+        expect(usesCost([reply(null, { output: 1 })], PRICES)).toBeNull()
     })
 
     test('no replies cost nothing', () => {

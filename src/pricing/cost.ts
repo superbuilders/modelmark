@@ -56,7 +56,7 @@ export function usesCost(uses: TokenUse[], prices: PriceList): number | null {
     let total = 0
 
     for (const use of uses) {
-        const price = priceOf(use.model, prices)
+        const price = use.model === null ? undefined : priceOf(use.model, prices)
 
         if (!price) {
             return null
