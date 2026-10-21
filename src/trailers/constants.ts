@@ -1,4 +1,8 @@
-/** The commit trailer modelmark writes, following the Linux kernel's convention. */
+/**
+ * The commit trailer modelmark writes. The Linux kernel introduced it for
+ * naming an AI tool, then stopped asking for it; the `@effort` part and the
+ * cost trailer are modelmark's own.
+ */
 export const TRAILER_KEY = 'Assisted-by'
 
 /** The commit trailer holding the estimated cost of the replies behind a commit. */

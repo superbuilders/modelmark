@@ -23,6 +23,7 @@
     "license": "MIT",
     "type": "module",
     "bin": {
+        "git-modelmark": "src/cli.ts",
         "modelmark": "src/cli.ts"
     },
     "files": [

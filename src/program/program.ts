@@ -10,6 +10,7 @@ import { PRICE_FORMATS } from '../commands/prices/constants'
 import { pricesCommand, refreshPricesCommand } from '../commands/prices/prices'
 import { HEX_COLOR, SUMMARY_FORMATS } from '../commands/summary/constants'
 import { summaryCommand } from '../commands/summary/summary'
+import { DOCTOR_HELP, PRICES_HELP, PROGRAM_HELP, SUMMARY_HELP } from './constants'
 
 import type { PricesOptions } from '../commands/prices/types'
 import type { AgentColors, AgentLogos } from '../commands/summary/types'
@@ -85,7 +86,8 @@ export function buildProgram(): Command {
     const program = new Command()
         .name('modelmark')
         .version(version)
-        .description('Mark each commit with the agent and model that made it')
+        .description('Mark each commit with the agent and model that made it, and what it cost')
+        .addHelpText('after', PROGRAM_HELP)
 
     program
         .command('install')
@@ -101,6 +103,7 @@ export function buildProgram(): Command {
         .command('doctor')
         .description('check the setup here and show the mark a commit would get')
         .option('--json', 'print the facts and checks as JSON')
+        .addHelpText('after', DOCTOR_HELP)
         .action(doctorCommand)
 
     program
@@ -128,6 +131,7 @@ export function buildProgram(): Command {
                 .argParser(addLogo)
                 .default({}, 'none'),
         )
+        .addHelpText('after', SUMMARY_HELP)
         .action(summaryCommand)
 
     program
@@ -140,6 +144,7 @@ export function buildProgram(): Command {
         .addOption(new Option('--all', 'show every model'))
         .addOption(formatOption('how to print the prices', PRICE_FORMATS))
         .addOption(new Option('--json', 'shorthand for --format json').conflicts('format'))
+        .addHelpText('after', PRICES_HELP)
         .action((filter: string | undefined, options: PricesOptions) =>
             pricesCommand(filter, options),
         )

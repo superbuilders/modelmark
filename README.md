@@ -37,6 +37,11 @@ bun add -g modelmark
 modelmark install    # in each repository
 ```
 
+Installed this way, it also runs as a git command: `git modelmark summary`,
+or `git -C ../other-repo modelmark doctor` for another repository. Use
+`git modelmark -h` for help: git turns `--help` into a search for a manual
+page that doesn't exist.
+
 `install` adds one line to the `prepare-commit-msg` hook (Husky's, if the
 repository uses Husky). The hook never blocks a commit: if anything goes wrong,
 the commit goes through unmarked. Run `modelmark doctor` to check the setup.
