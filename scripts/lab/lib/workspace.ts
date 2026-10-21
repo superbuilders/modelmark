@@ -183,7 +183,7 @@ export class Workspace implements ScenarioWorkspace {
     }
 
     /**
-     * The Assisted-by and Assisted-cost values on the newest commit.
+     * The Assisted-by, Assisted-cost and Assisted-tokens values on the newest commit.
      * @returns them, in order, or null when no lab commit was made
      */
     async trailers(): Promise<CommitTrailers | null> {
@@ -192,17 +192,17 @@ export class Workspace implements ScenarioWorkspace {
                 'git',
                 'log',
                 '-1',
-                '--format=%s%x1f%(trailers:key=Assisted-by,valueonly)%x1f%(trailers:key=Assisted-cost,valueonly)',
+                '--format=%s%x1f%(trailers:key=Assisted-by,valueonly)%x1f%(trailers:key=Assisted-cost,valueonly)%x1f%(trailers:key=Assisted-tokens,valueonly)',
             ],
             { cwd: this.repo },
         )
-        const [subject, marks = '', costs = ''] = result.stdout.split('\u001F')
+        const [subject, marks = '', costs = '', tokens = ''] = result.stdout.split('\u001F')
 
         if (result.exitCode !== 0 || subject !== COMMIT_MESSAGE) {
             return null
         }
 
-        return { marks: values(marks), costs: values(costs) }
+        return { marks: values(marks), costs: values(costs), tokens: values(tokens) }
     }
 
     /**

@@ -29,3 +29,17 @@ export interface MarkParts {
  * add the trailer unless that exact line is there, or replace the old one.
  */
 export type IfTrailerExists = 'addIfDifferent' | 'replace'
+
+/**
+ * Tokens added up across replies, in four kinds that never overlap.
+ */
+export interface TokenCounts {
+    /** Input the model read fresh, not from the prompt cache. */
+    input: number
+    /** Input written to the prompt cache. */
+    cacheWrite: number
+    /** Output, thinking included. */
+    output: number
+    /** Input read back from the prompt cache. */
+    cacheRead: number
+}

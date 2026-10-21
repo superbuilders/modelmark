@@ -1,3 +1,4 @@
+import type { TokenCounts } from '../../trailers/types'
 import type { SUMMARY_FORMATS } from './constants'
 
 /**
@@ -53,6 +54,13 @@ export interface MarkCount {
      * Absent when none of them has a cost line.
      */
     cost?: number
+
+    /**
+     * The tokens those commits used, from their tokens lines, split between
+     * a commit's marks like its cost and rounded to whole tokens. Absent when
+     * none of them has a tokens line.
+     */
+    tokens?: TokenCounts
 }
 
 /**

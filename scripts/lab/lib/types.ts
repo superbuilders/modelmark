@@ -71,6 +71,8 @@ export interface CommitTrailers {
     marks: string[]
     /** Its Assisted-cost values, in order. */
     costs: string[]
+    /** Its Assisted-tokens values, in order. */
+    tokens: string[]
 }
 
 /**
@@ -89,6 +91,8 @@ export interface ScenarioResult {
     trailers?: string[]
     /** The newest commit's Assisted-cost values. */
     costs?: string[]
+    /** The newest commit's Assisted-tokens values. */
+    tokens?: string[]
     /** How long each hook run took, in milliseconds. */
     hookMs?: number[]
     /** Wall time of the whole scenario. */

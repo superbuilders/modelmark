@@ -70,6 +70,32 @@ describe('summaryBadges', () => {
         expect(paths.at(-1)).toBe('/badge/~%244.20-57606A')
     })
 
+    test('shows its tokens before its cost, with what was read from cache on hover', () => {
+        const html = summaryBadges({
+            total: 1,
+            unmarked: 0,
+            marks: [
+                {
+                    mark: 'pi:kimi-k3',
+                    commits: 1,
+                    cost: 4.2,
+                    tokens: {
+                        input: 18_400,
+                        cacheWrite: 96_000,
+                        output: 41_300,
+                        cacheRead: 3_120_000,
+                    },
+                },
+            ],
+        })
+
+        expect([...html.matchAll(/alt="([^"]*)"/g)].map(([, alt]) => alt).slice(-2)).toEqual([
+            '156k tokens',
+            '~$4.20',
+        ])
+        expect(html).toContain('title="156k new tokens, plus 3.1M read from cache"')
+    })
+
     test("escapes shields.io's separators and gives each harness its logo", () => {
         const html = summaryBadges({
             total: 2,

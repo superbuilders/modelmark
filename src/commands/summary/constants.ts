@@ -37,6 +37,9 @@ export const UNKNOWN_HARNESS_COLORS = { color: '6E7781', effortColor: '4F565D' }
 /** The lighter grey of a badge's cost, so it reads apart from the commit count beside it. */
 export const BADGE_COST_COLOR = '57606A'
 
+/** The middle grey of a badge's token count, between the commit count and the cost. */
+export const BADGE_TOKENS_COLOR = '444C56'
+
 /** The lighter grey of the count on the badge for commits with no mark. */
 export const NO_MARK_COUNT_COLOR = '57606A'
 

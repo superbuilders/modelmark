@@ -88,6 +88,7 @@ async function runScenario(
         trailers: trailers?.marks ?? null,
         costed: scenario.expected.length > 0 && scenario.priced !== false,
         costs: trailers?.costs ?? [],
+        tokens: trailers?.tokens ?? [],
         hookMs,
         hookErrors,
     })
@@ -98,6 +99,7 @@ async function runScenario(
         ...(reason ? { reason } : {}),
         trailers: trailers?.marks ?? [],
         costs: trailers?.costs ?? [],
+        tokens: trailers?.tokens ?? [],
         hookMs,
         seconds: secondsSince(started),
     }

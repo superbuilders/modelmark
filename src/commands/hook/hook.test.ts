@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { detect } from '../../agents/detect'
 import { git } from '../../system/command'
-import { costMessage, hookCommand, markMessage } from './hook'
+import { hookCommand, markMessage, usageMessage } from './hook'
 
 import type { Detection, FoundAgent, ModelUse } from '../../agents/types'
 import type { PriceList } from '../../pricing/types'
@@ -114,10 +114,19 @@ describe('markMessage', () => {
     })
 })
 
-describe('costMessage', () => {
+describe('usageMessage', () => {
     const PRICES: PriceList = { 'claude-opus-5-5': { input: 4, output: 20 } }
     const MARK = 'Assisted-by: claude-code:claude-opus-5-5@medium'
     const refresh = vi.fn<() => void>()
+
+    /**
+     * The tokens line for replies that only wrote output.
+     * @param output - the output tokens
+     * @returns the line
+     */
+    function tokens(output: number): string {
+        return `Assisted-tokens: 0 input, 0 cache-write, ${output} output, 0 cache-read`
+    }
 
     /**
      * A Claude Code session with fresh state, committing in a fresh repository
@@ -178,14 +187,21 @@ describe('costMessage', () => {
         const second = messageFile(`Two\n\n${MARK}\n`)
 
         reply(100_000)
-        expect(await costMessage(first, OPUS, env, PRICES, refresh)).toBe('Assisted-cost: $2.00')
+        expect(await usageMessage(first, OPUS, env, PRICES, refresh)).toEqual([
+            'Assisted-cost: $2.00',
+            tokens(100_000),
+        ])
         await commit(first)
 
         reply(50_000)
-        await costMessage(second, OPUS, env, PRICES, refresh)
+        await usageMessage(second, OPUS, env, PRICES, refresh)
 
-        expect(readFileSync(first, 'utf8')).toBe(`One\n\n${MARK}\nAssisted-cost: $2.00\n`)
-        expect(readFileSync(second, 'utf8')).toBe(`Two\n\n${MARK}\nAssisted-cost: $1.00\n`)
+        expect(readFileSync(first, 'utf8')).toBe(
+            `One\n\n${MARK}\nAssisted-cost: $2.00\n${tokens(100_000)}\n`,
+        )
+        expect(readFileSync(second, 'utf8')).toBe(
+            `Two\n\n${MARK}\nAssisted-cost: $1.00\n${tokens(50_000)}\n`,
+        )
     })
 
     test('a commit git drops leaves its replies to the next try', async () => {
@@ -193,12 +209,14 @@ describe('costMessage', () => {
         const path = messageFile(`One\n\n${MARK}\n`)
 
         reply(100_000)
-        await costMessage(path, OPUS, env, PRICES, refresh)
+        await usageMessage(path, OPUS, env, PRICES, refresh)
 
         reply(50_000)
         writeFileSync(path, `One\n\n${MARK}\n`)
-        await costMessage(path, OPUS, env, PRICES, refresh)
-        expect(readFileSync(path, 'utf8')).toBe(`One\n\n${MARK}\nAssisted-cost: $3.00\n`)
+        await usageMessage(path, OPUS, env, PRICES, refresh)
+        expect(readFileSync(path, 'utf8')).toBe(
+            `One\n\n${MARK}\nAssisted-cost: $3.00\n${tokens(150_000)}\n`,
+        )
     })
 
     test('replies made in another repository are not charged here', async () => {
@@ -207,7 +225,7 @@ describe('costMessage', () => {
 
         mkdirSync(join(elsewhere, '.git'))
         reply(100_000, elsewhere)
-        expect(await costMessage(messageFile('One\n'), OPUS, env, PRICES, refresh)).toBeNull()
+        expect(await usageMessage(messageFile('One\n'), OPUS, env, PRICES, refresh)).toEqual([])
     })
 
     test('a commit outside a repository gets no cost', async () => {
@@ -215,37 +233,40 @@ describe('costMessage', () => {
 
         vi.spyOn(process, 'cwd').mockReturnValue(tmpdir())
         reply(100_000)
-        expect(await costMessage(messageFile('One\n'), OPUS, env, PRICES, refresh)).toBeNull()
+        expect(await usageMessage(messageFile('One\n'), OPUS, env, PRICES, refresh)).toEqual([])
     })
 
-    test('an amend adds its new replies to the cost already there', async () => {
+    test('an amend adds its new replies to the cost and tokens already there', async () => {
         const { env, reply } = await session()
-        const path = messageFile('One\n\nAssisted-cost: $2.00\n')
+        const path = messageFile(`One\n\nAssisted-cost: $2.00\n${tokens(100_000)}\n`)
 
         reply(50_000)
-        await costMessage(path, OPUS, env, PRICES, refresh)
+        await usageMessage(path, OPUS, env, PRICES, refresh)
 
-        expect(readFileSync(path, 'utf8')).toBe('One\n\nAssisted-cost: $3.00\n')
+        expect(readFileSync(path, 'utf8')).toBe(`One\n\nAssisted-cost: $3.00\n${tokens(150_000)}\n`)
     })
 
     test('a cheap commit still gets its cost', async () => {
         const { env, reply } = await session()
 
         reply(100)
-        expect(await costMessage(messageFile('One\n'), OPUS, env, PRICES, refresh)).toBe(
+        expect(await usageMessage(messageFile('One\n'), OPUS, env, PRICES, refresh)).toEqual([
             'Assisted-cost: $0.0020',
-        )
+            tokens(100),
+        ])
     })
 
-    test('an amend with no new replies keeps its cost', async () => {
+    test('an amend with no new replies keeps its cost and tokens', async () => {
         const { env, reply, commit } = await session()
         const path = messageFile(`One\n\n${MARK}\n`)
 
         reply(50_000)
-        await costMessage(path, OPUS, env, PRICES, refresh)
+        await usageMessage(path, OPUS, env, PRICES, refresh)
         await commit(path)
-        expect(await costMessage(path, OPUS, env, PRICES, refresh)).toBeNull()
-        expect(readFileSync(path, 'utf8')).toBe(`One\n\n${MARK}\nAssisted-cost: $1.00\n`)
+        expect(await usageMessage(path, OPUS, env, PRICES, refresh)).toEqual([])
+        expect(readFileSync(path, 'utf8')).toBe(
+            `One\n\n${MARK}\nAssisted-cost: $1.00\n${tokens(50_000)}\n`,
+        )
     })
 
     test('starts one background price refresh when due, and none offline', async () => {
@@ -253,16 +274,16 @@ describe('costMessage', () => {
 
         vi.mocked(spawn).mockClear()
         reply(100)
-        await costMessage(messageFile('One\n'), OPUS, env, PRICES)
+        await usageMessage(messageFile('One\n'), OPUS, env, PRICES)
         reply(100)
-        await costMessage(messageFile('Two\n'), OPUS, env, PRICES)
+        await usageMessage(messageFile('Two\n'), OPUS, env, PRICES)
         expect(spawn).toHaveBeenCalledOnce()
         expect(vi.mocked(spawn).mock.calls[0]?.[1]).toContain('refresh-prices')
 
         const offline = await session()
 
         offline.reply(100)
-        await costMessage(
+        await usageMessage(
             messageFile('One\n'),
             OPUS,
             { ...offline.env, MODELMARK_OFFLINE: '1' },
@@ -271,15 +292,15 @@ describe('costMessage', () => {
         expect(spawn).toHaveBeenCalledOnce()
     })
 
-    test('replies without a price get no cost, and still count as used', async () => {
+    test('replies without a price get tokens but no cost, and still count as used', async () => {
         const { env, reply, commit } = await session()
         const path = messageFile(`One\n\n${MARK}\n`)
 
         reply(100_000)
-        expect(await costMessage(path, OPUS, env, {}, refresh)).toBeNull()
+        expect(await usageMessage(path, OPUS, env, {}, refresh)).toEqual([tokens(100_000)])
         await commit(path)
-        expect(await costMessage(path, OPUS, env, PRICES, refresh)).toBeNull()
-        expect(readFileSync(path, 'utf8')).toBe(`One\n\n${MARK}\n`)
+        expect(await usageMessage(path, OPUS, env, PRICES, refresh)).toEqual([])
+        expect(readFileSync(path, 'utf8')).toBe(`One\n\n${MARK}\n${tokens(100_000)}\n`)
     })
 })
 

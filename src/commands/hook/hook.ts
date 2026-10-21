@@ -10,6 +10,7 @@ import { hookDisabled } from '../../setup/hooks'
 import { costTrailer } from '../../trailers/cost'
 import { markTrailer } from '../../trailers/mark'
 import { messageCost, writeTrailer } from '../../trailers/message'
+import { addTokens, messageTokens, tokensTrailer } from '../../trailers/tokens'
 import { SKIPPED_SOURCES } from './constants'
 
 import type { Detection, FoundAgent, ModelUse } from '../../agents/types'
@@ -65,55 +66,63 @@ function refreshPricesIfDue(env: Env = process.env): void {
 }
 
 /**
- * Add the estimated cost of the agent's replies in this repository since its
- * last commit here to a commit message file. An amend adds the new replies to the cost already
- * there. The replies count as used even when their models have no price, so
- * no later commit counts them again. Then the prices are refreshed in the
+ * Add what the agent's replies in this repository since its last commit here
+ * used to a commit message file: their estimated cost, and their tokens. An
+ * amend adds the new replies to what is already there. Tokens are written
+ * even when a model has no price, and the replies count as used either way,
+ * so no later commit counts them again. Then the prices are refreshed in the
  * background when they are due.
  * @param messageFile - the message file git passes to prepare-commit-msg
  * @param detection - the agent making the commit, and its model
  * @param env - the environment (default: this process's)
  * @param prices - the price list (default: the shipped one, updated from the cache, read only when there are replies to price)
  * @param refresh - starts a price refresh if one is due
- * @returns the trailer written, or null when the commit gets none
+ * @returns the trailers written, none when the commit gets none
  */
-export async function costMessage(
+export async function usageMessage(
     messageFile: string,
     detection: FoundAgent & ModelUse,
     env: Env = process.env,
     prices?: PriceList,
     refresh: () => void = () => refreshPricesIfDue(env),
-): Promise<string | null> {
+): Promise<string[]> {
     const { agent } = detection
     const attempt = await commitAttempt(markTrailer(detection))
     const use = attempt && (await usesSinceLastCommit(agent, env, attempt.root))
 
     if (!attempt || !use) {
-        return null
+        return []
     }
 
-    const usd = use.uses.length > 0 ? usesCost(use.uses, prices ?? loadPriceList(env)) : 0
-    let trailer: string | null = null
+    const trailers: string[] = []
 
     /*
-     * An amend with no new replies keeps the cost it has.
+     * An amend with no new replies keeps what it has.
      */
-    if (use.uses.length > 0 && usd !== null) {
-        const total = (messageCost(readFileSync(messageFile, 'utf8')) ?? 0) + usd
+    if (use.uses.length > 0) {
+        const message = readFileSync(messageFile, 'utf8')
+        const usd = usesCost(use.uses, prices ?? loadPriceList(env))
+        const earlier = messageTokens(message)
 
-        trailer = costTrailer(total)
+        if (usd !== null) {
+            trailers.push(costTrailer((messageCost(message) ?? 0) + usd))
+        }
 
-        await writeTrailer(messageFile, trailer, 'replace')
+        trailers.push(tokensTrailer(addTokens(earlier ? [earlier, ...use.uses] : use.uses)))
+
+        for (const trailer of trailers) {
+            await writeTrailer(messageFile, trailer, 'replace')
+        }
     }
 
     markCounted(agent, use, attempt, env)
     refresh()
 
-    return trailer
+    return trailers
 }
 
 /**
- * The prepare-commit-msg hook: the mark, then the cost. A merge, or a commit
+ * The prepare-commit-msg hook: the mark, then the cost and tokens. A merge, or a commit
  * made with `MODELMARK_DISABLE` set, is skipped before anything is looked up,
  * so its replies count toward the next commit. The hook never fails the
  * commit: a problem prints a warning and the commit goes ahead without what
@@ -150,8 +159,8 @@ export async function hookCommand(
     }
 
     try {
-        await costMessage(messageFile, detection, env)
+        await usageMessage(messageFile, detection, env)
     } catch (error) {
-        console.error(`modelmark: commit left without a cost (${String(error)})`)
+        console.error(`modelmark: commit left without a cost or tokens (${String(error)})`)
     }
 }

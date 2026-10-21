@@ -25,6 +25,7 @@ describe('verdict', () => {
         trailers: ['pi:kimi-k3@low'],
         costed: true,
         costs: ['$0.0123'],
+        tokens: ['0 input, 0 cache-write, 812 output, 0 cache-read'],
         hookMs: [80],
         hookErrors: '',
     }
@@ -43,6 +44,15 @@ describe('verdict', () => {
         expect(verdict({ ...passing, trailers: [] })).toMatch(/^expected/)
         expect(verdict({ ...passing, costs: [] })).toBe('expected one cost line, got []')
         expect(verdict({ ...passing, costed: false })).toMatch(/^expected no cost line/)
+        expect(verdict({ ...passing, tokens: [] })).toBe(
+            'expected one tokens line with output, got []',
+        )
+        expect(
+            verdict({ ...passing, tokens: ['9 input, 0 cache-write, 0 output, 0 cache-read'] }),
+        ).toMatch(/^expected one tokens line with output/)
+        expect(verdict({ ...passing, costed: false, costs: [] })).toMatch(
+            /^expected no tokens line/,
+        )
         expect(verdict({ ...passing, hookMs: [80, HOOK_BUDGET_MS + 1] })).toMatch(/over the/)
         expect(verdict({ ...passing, hookErrors: 'modelmark: commit left unmarked' })).toMatch(
             /printed/,

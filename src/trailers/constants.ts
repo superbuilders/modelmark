@@ -16,3 +16,17 @@ export const AGENT_SEPARATOR = ':'
 
 /** Separates the model from its effort in a mark: `codex:gpt-5.6-terra@high`. */
 export const EFFORT_SEPARATOR = '@'
+
+/** The commit trailer holding the tokens the replies behind a commit used. */
+export const TOKENS_TRAILER_KEY = 'Assisted-tokens'
+
+/**
+ * Each kind of token as the tokens trailer names it, in the order it writes
+ * them: `Assisted-tokens: 12000 input, 80000 cache-write, 45000 output, 3100000 cache-read`.
+ */
+export const TOKEN_KINDS = {
+    input: 'input',
+    cacheWrite: 'cache-write',
+    output: 'output',
+    cacheRead: 'cache-read',
+} as const

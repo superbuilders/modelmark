@@ -32,8 +32,9 @@ the modelmark hook from this checkout installed. The scenario asks a real agent
 to run one exact `git commit` (cheapest models, one-line prompts), then checks:
 
 - the newest commit's `Assisted-by` trailers are exactly the expected ones;
-- a marked commit has one `Assisted-cost` line, and an unmarked one (or one
-  with no log to price, like Pi without a session file) has none;
+- a marked commit has one `Assisted-cost` line and one `Assisted-tokens` line
+  counting some output, and an unmarked one (or one with no log to price,
+  like Pi without a session file) has neither;
 - every hook run took at most 500 ms, Bun's startup included;
 - the hook printed nothing (a warning means a commit went unmarked).
 

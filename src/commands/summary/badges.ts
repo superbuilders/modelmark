@@ -4,6 +4,7 @@ import {
     BADGE_COST_COLOR,
     BADGE_DARK,
     BADGE_STYLE,
+    BADGE_TOKENS_COLOR,
     EFFORT_SHADE,
     HARNESS_BADGES,
     NO_MARK_COUNT_COLOR,
@@ -11,7 +12,7 @@ import {
     SHIELDS_URL,
     UNKNOWN_HARNESS_COLORS,
 } from './constants'
-import { commitsText, costText } from './words'
+import { commitsText, costText, newTokensText, tokensHover } from './words'
 
 import type { AgentId } from '../../agents/types'
 import type {
@@ -48,10 +49,16 @@ function logoParameter(logo: HarnessBadge['logo']): string {
  * reads where images don't load.
  * @param text - the piece's text
  * @param color - its background, as hex without the `#`
- * @param logo - a logo to show before the text
+ * @param options - what else the piece shows
+ * @param options.logo - a logo to show before the text
+ * @param options.hover - text shown when the pointer rests on the piece
  * @returns the HTML image
  */
-function piece(text: string, color: string, logo?: HarnessBadge['logo']): string {
+function piece(
+    text: string,
+    color: string,
+    { logo, hover }: { logo?: HarnessBadge['logo']; hover?: string } = {},
+): string {
     const url = new URL(`${SHIELDS_URL}${shieldsText(text)}-${color}`)
 
     url.searchParams.set('style', BADGE_STYLE)
@@ -61,7 +68,7 @@ function piece(text: string, color: string, logo?: HarnessBadge['logo']): string
         url.searchParams.set('logoColor', 'white')
     }
 
-    return `<img alt="${text}" src="${url.href}">`
+    return `<img alt="${text}"${hover ? ` title="${hover}"` : ''} src="${url.href}">`
 }
 
 /**
@@ -115,24 +122,31 @@ function agentLogo(agent: string, logos: AgentLogos): HarnessBadge['logo'] | und
 
 /**
  * One mark's badge: the harness, the model, the effort, the commit count and
- * (when known) the estimated cost, as pieces with nothing between them so
- * they read as one.
- * @param count - the mark, its commit count and its cost
+ * (when known) the tokens used and the estimated cost, as pieces with nothing
+ * between them so they read as one. Cache reads would swamp the token count,
+ * so the token piece names them only on hover.
+ * @param count - the mark, its commit count, its tokens and its cost
  * @param count.mark - the trailer value
  * @param count.commits - how many commits carry it
  * @param count.cost - their estimated cost, when known
+ * @param count.tokens - their tokens, when known
  * @param styles - colors and logos given for agents modelmark doesn't know
  * @returns the HTML
  */
-function markBadge({ mark, commits, cost }: MarkCount, styles: AgentStyles): string {
+function markBadge({ mark, commits, cost, tokens }: MarkCount, styles: AgentStyles): string {
     const { agent, model, effort } = parseMark(mark)
     const { color, effortColor } = agentColors(agent, styles.color)
 
     return [
-        piece(harnessName(agent), BADGE_DARK, agentLogo(agent, styles.logo)),
+        piece(harnessName(agent), BADGE_DARK, { logo: agentLogo(agent, styles.logo) }),
         piece(model, color),
         effort ? piece(effort, effortColor) : '',
         piece(commitsText(commits), BADGE_DARK),
+        tokens
+            ? piece(newTokensText(tokens), BADGE_TOKENS_COLOR, {
+                  hover: tokensHover(tokens),
+              })
+            : '',
         cost === undefined ? '' : piece(costText(cost), BADGE_COST_COLOR),
     ].join('')
 }

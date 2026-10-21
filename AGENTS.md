@@ -9,7 +9,7 @@ made each git commit. A `prepare-commit-msg` hook finds the agent by walking up
 the process tree, reads the model and effort from the end of that agent's session log,
 and appends an `Assisted-by: <agent>:<model>@<effort>` trailer, then an
 `Assisted-cost: $<usd>` trailer pricing the session's replies since its last
-commit. A pull request summary then counts those trailers across the branch's
+commit and an `Assisted-tokens` trailer counting their tokens. A pull request summary then counts those trailers across the branch's
 commits. This is a single-package
 Bun + TypeScript CLI.
 
@@ -113,8 +113,8 @@ the tags and where fakes live.
   stopped counting (`checkpoints.ts`).
 - `pricing/`: the price list (shipped, cached, refreshed from models.dev) and
   what tokens cost. It knows nothing about harnesses.
-- `trailers/`: the commit-message format: writing and parsing `Assisted-by`
-  and `Assisted-cost` lines, and finding them in a message.
+- `trailers/`: the commit-message format: writing and parsing `Assisted-by`,
+  `Assisted-cost` and `Assisted-tokens` lines, and finding them in a message.
 - `setup/`: whether and how a repository runs modelmark's hook (`install` and
   `doctor` share it).
 - `system/`: generic helpers: the process table, reading
@@ -167,6 +167,12 @@ may start the hidden `refresh-prices` command detached (README, "Fresh
 prices"); the commit never waits on the network. A model without a price makes the commit's cost unknown, never
 $0.
 
+The same replies' four buckets are summed into `Assisted-tokens`, written
+even when the cost is unknown. `summary` shows fresh input, cache writes and
+output as one "tokens" number and cache reads apart as "cached", since cache
+reads re-read context every reply and would swamp the rest (Codex's own
+total leaves them out the same way).
+
 A commit pays only for replies that worked in its repository
 (`workedIn` in `agents/usage.ts`). The absolute paths a reply's tool calls
 name decide when any of them is in a repository (`system/repos.ts`, nearest
@@ -177,7 +183,7 @@ After each commit the hook saves the newest counted reply's time under
 `$XDG_STATE_HOME/modelmark/checkpoints/`, one file per session and
 repository, and the next commit there counts only replies after it. The
 checkpoint stays pending until the next run sees the commit was made. An amend
-adds to the cost already in the message. `agents/checkpoints.test.ts` plays
+adds to the cost and tokens already in the message. `agents/checkpoints.test.ts` plays
 each multi-repository scenario through all three log formats.
 
 The hook never fails a commit. Merge commits, and commits made with

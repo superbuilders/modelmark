@@ -3,10 +3,12 @@ import { git, runCommand } from '../../system/command'
 import { markdownTable } from '../../system/markdown'
 import { parseMark } from '../../trailers/mark'
 import { marksIn, messageCost } from '../../trailers/message'
+import { addTokens, messageTokens } from '../../trailers/tokens'
 import { summaryBadges } from './badges'
 import { COMMIT_SEPARATOR, DEFAULT_BRANCHES, NO_MARK, NO_MARK_ROW } from './constants'
-import { commitsText, costText } from './words'
+import { cachedText, commitsText, costText, newTokensText } from './words'
 
+import type { TokenCounts } from '../../trailers/types'
 import type {
     AgentColors,
     AgentLogos,
@@ -18,8 +20,8 @@ import type {
 
 /**
  * Count the marks across a range of commits, skipping merges, and add up
- * their costs. A squashed commit counts once for each mark its body holds,
- * and its cost is the sum of its cost lines. Git reads the range only as
+ * their costs and tokens. A squashed commit counts once for each mark its
+ * body holds, and its cost and tokens are the sums of its lines. Git reads the range only as
  * revisions, so a typo is an error rather than an option or a file to filter by.
  * @param range - a git revision range, such as `main..HEAD`
  * @param cwd - the repository (default: this process's folder)
@@ -42,6 +44,13 @@ export async function summarize(range: string, cwd?: string): Promise<Summary> {
         }
 
         const cost = messageCost(commit)
+        const tokens = messageTokens(commit)
+        const share = tokens && {
+            input: Math.round(tokens.input / marks.size),
+            cacheWrite: Math.round(tokens.cacheWrite / marks.size),
+            output: Math.round(tokens.output / marks.size),
+            cacheRead: Math.round(tokens.cacheRead / marks.size),
+        }
 
         for (const mark of marks) {
             const count = counts.get(mark) ?? { mark, commits: 0 }
@@ -50,6 +59,10 @@ export async function summarize(range: string, cwd?: string): Promise<Summary> {
 
             if (cost !== undefined) {
                 count.cost = (count.cost ?? 0) + cost / marks.size
+            }
+
+            if (share) {
+                count.tokens = count.tokens ? addTokens([count.tokens, share]) : share
             }
 
             counts.set(mark, count)
@@ -118,7 +131,8 @@ export async function defaultRange(cwd?: string): Promise<string> {
 }
 
 /**
- * The summary as plain text: a header, then one line per mark, with its cost when known.
+ * The summary as plain text: a header, then one line per mark, with its cost
+ * and tokens when known.
  * @param range - the range covered
  * @param summary - its counts
  * @returns the text
@@ -130,8 +144,12 @@ function summaryText(range: string, summary: Summary): string {
             : summary.marks
 
     const width = String(summary.total).length
-    const lines = counts.map(({ mark, commits, cost }) =>
-        [`  ${String(commits).padStart(width)}  ${mark}`, cost === undefined ? '' : costText(cost)]
+    const lines = counts.map(({ mark, commits, cost, tokens }) =>
+        [
+            `  ${String(commits).padStart(width)}  ${mark}`,
+            cost === undefined ? '' : costText(cost),
+            tokens ? `${newTokensText(tokens)}, ${cachedText(tokens)}` : '',
+        ]
             .filter(Boolean)
             .join('  '),
     )
@@ -140,29 +158,57 @@ function summaryText(range: string, summary: Summary): string {
 }
 
 /**
+ * A mark's Tokens and Cached cells.
+ * @param tokens - its tokens, if any commit had a tokens line
+ * @returns the two cells, empty when it has no tokens
+ */
+function tokenCells(tokens: TokenCounts | undefined): string[] {
+    return tokens ? [newTokensText(tokens), cachedText(tokens)] : ['', '']
+}
+
+/**
  * The summary as a Markdown table for a pull request body or comment, with
- * the harness, model and effort apart, and a cost column when any mark has a
- * cost. It names no range, because the pull
- * request already says which commits it holds.
+ * the harness, model and effort apart, and cost and token columns when any
+ * mark has them. It names no range, because the pull request already says
+ * which commits it holds.
  * @param summary - its counts
  * @returns the Markdown
  */
 export function summaryTable(summary: Summary): string {
     const costs = summary.marks.some(({ cost }) => cost !== undefined)
-    const rows = summary.marks.map(({ mark, commits, cost }) => {
-        const { agent, model, effort } = parseMark(mark)
-        const row = [harnessName(agent), model, effort ?? '', String(commits)]
+    const tokens = summary.marks.some(count => count.tokens)
+    const headers = [
+        'Harness',
+        'Model',
+        'Effort',
+        'Commits',
+        ...(costs ? ['Cost'] : []),
+        ...(tokens ? ['Tokens', 'Cached'] : []),
+    ]
+    const rows = summary.marks.map(count => {
+        const { agent, model, effort } = parseMark(count.mark)
 
-        return costs ? [...row, cost === undefined ? '' : costText(cost)] : row
+        return [
+            harnessName(agent),
+            model,
+            effort ?? '',
+            String(count.commits),
+            ...(costs ? [count.cost === undefined ? '' : costText(count.cost)] : []),
+            ...(tokens ? tokenCells(count.tokens) : []),
+        ]
     })
 
     if (summary.unmarked > 0) {
-        rows.push([NO_MARK_ROW, '', '', String(summary.unmarked), ...(costs ? [''] : [])])
+        rows.push([
+            NO_MARK_ROW,
+            '',
+            '',
+            String(summary.unmarked),
+            ...Array.from({ length: headers.length - 4 }, () => ''),
+        ])
     }
 
-    const headers = ['Harness', 'Model', 'Effort', 'Commits']
-
-    return markdownTable(costs ? [...headers, 'Cost'] : headers, rows)
+    return markdownTable(headers, rows)
 }
 
 /**

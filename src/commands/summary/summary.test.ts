@@ -104,6 +104,29 @@ describe('summarize', () => {
         ])
     })
 
+    test("adds up each mark's tokens, splitting a commit's tokens between its marks", async () => {
+        const repo = await repoWith([
+            'one\n\nAssisted-by: pi:kimi-k3\nAssisted-tokens: 10 input, 0 cache-write, 4 output, 100 cache-read',
+            'two\n\nAssisted-by: pi:kimi-k3\nAssisted-by: codex:gpt-5.6-terra\nAssisted-tokens: 20 input, 6 cache-write, 2 output, 50 cache-read',
+            'three\n\nAssisted-by: codex:gpt-5.6-terra',
+        ])
+
+        const { marks } = await summarize('base..HEAD', repo)
+
+        expect(marks).toEqual([
+            {
+                mark: 'codex:gpt-5.6-terra',
+                commits: 2,
+                tokens: { input: 10, cacheWrite: 3, output: 1, cacheRead: 25 },
+            },
+            {
+                mark: 'pi:kimi-k3',
+                commits: 2,
+                tokens: { input: 20, cacheWrite: 3, output: 5, cacheRead: 125 },
+            },
+        ])
+    })
+
     test('marks with the same count sort by name', async () => {
         const repo = await repoWith([
             'a\n\nAssisted-by: pi:kimi-k3',
@@ -185,6 +208,20 @@ describe('summaryCommand', () => {
         expect(log).toHaveBeenCalledWith('base..HEAD: 1 commit\n  1  pi:kimi-k3  ~$1.50')
     })
 
+    test("prints a mark's tokens after its cost, with cache reads apart", async () => {
+        const repo = await repoWith([
+            'one\n\nAssisted-by: pi:kimi-k3\nAssisted-cost: $1.50\nAssisted-tokens: 18400 input, 96000 cache-write, 41300 output, 3120000 cache-read',
+        ])
+        const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+        vi.spyOn(process, 'cwd').mockReturnValue(repo)
+        await summaryCommand('base..HEAD', {})
+
+        expect(log).toHaveBeenCalledWith(
+            'base..HEAD: 1 commit\n  1  pi:kimi-k3  ~$1.50  156k tokens, 3.1M cached',
+        )
+    })
+
     test("defaults to this branch's commits, and prints JSON with the range", async () => {
         const repo = await repoWith([])
         const log = vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -244,6 +281,26 @@ describe('summaryTable', () => {
         })
 
         expect(markdown.split('\n')[3]).toMatch(/\| glm-6 +\| +\| 1 +\| +\|$/)
+    })
+
+    test('adds token columns when any mark has tokens, blank for one without', () => {
+        const markdown = summaryTable({
+            total: 3,
+            unmarked: 1,
+            marks: [
+                {
+                    mark: 'pi:kimi-k3',
+                    commits: 1,
+                    tokens: { input: 900, cacheWrite: 0, output: 50, cacheRead: 4200 },
+                },
+                { mark: 'pi:glm-6', commits: 1 },
+            ],
+        }).split('\n')
+
+        expect(markdown[0]).toMatch(/\| Commits \| Tokens +\| Cached +\|$/)
+        expect(markdown[2]).toMatch(/\| 1 +\| 950 tokens \| 4\.2k cached \|$/)
+        expect(markdown[3]).toMatch(/\| glm-6 +\| +\| 1 +\| +\| +\|$/)
+        expect(markdown[4]).toMatch(/^\| No mark .*\| 1 +\| +\| +\|$/)
     })
 
     test('splits each mark into harness, model and effort, with unmarked commits last', () => {

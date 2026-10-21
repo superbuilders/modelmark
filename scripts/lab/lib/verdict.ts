@@ -1,4 +1,5 @@
 import { HOOK_BUDGET_MS } from './constants'
+import { OUTPUT_COUNTED } from './patterns'
 
 import type { ExpectedMark } from './types'
 
@@ -14,6 +15,8 @@ interface Evidence {
     costed: boolean
     /** The newest commit's Assisted-cost values. */
     costs: string[]
+    /** The newest commit's Assisted-tokens values. */
+    tokens: string[]
     /** How long each hook run took. */
     hookMs: number[]
     /** What the hook printed to stderr. */
@@ -36,11 +39,11 @@ function matches(expected: ExpectedMark, actual: string | undefined): boolean {
 
 /**
  * Judge a scenario from what it left behind.
- * @param evidence - the commit's trailers and cost, and the hook's timings and errors
+ * @param evidence - the commit's trailers, cost and tokens, and the hook's timings and errors
  * @returns why it failed, or null when it passed
  */
 export function verdict(evidence: Evidence): string | null {
-    const { expected, trailers, costed, costs, hookMs, hookErrors } = evidence
+    const { expected, trailers, costed, costs, tokens, hookMs, hookErrors } = evidence
 
     if (trailers === null) {
         return 'no lab commit was made'
@@ -59,6 +62,13 @@ export function verdict(evidence: Evidence): string | null {
 
     if (costs.length !== (costed ? 1 : 0)) {
         return `expected ${costed ? 'one cost line' : 'no cost line'}, got [${costs.join(', ')}]`
+    }
+
+    /*
+     * A priced reply wrote something, so its tokens line counts some output.
+     */
+    if (tokens.length !== (costed ? 1 : 0) || (costed && !OUTPUT_COUNTED.test(tokens[0] ?? ''))) {
+        return `expected ${costed ? 'one tokens line with output' : 'no tokens line'}, got [${tokens.join(', ')}]`
     }
 
     const slowest = Math.max(...hookMs)
