@@ -12,8 +12,8 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
+import { HOOK_LINES } from '../../setup/constants'
 import { git } from '../../system/command'
-import { HOOK_LINES } from '../../system/constants'
 import { install, installCommand, uninstall, uninstallCommand } from './install'
 
 /** The line a repository without modelmark as a dependency gets. */

@@ -2,21 +2,17 @@ import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-import { COST_TRAILER_KEY, PRICE_REFRESH_STATE } from '../../agents/constants'
-import {
-    costValue,
-    markCounted,
-    messageCost,
-    usesCost,
-    usesSinceLastCommit,
-} from '../../agents/cost'
-import { detect, markTrailer } from '../../agents/mark'
-import { loadPriceList, priceRefreshDue } from '../../agents/prices'
-import { git } from '../../system/command'
-import { writeState } from '../../system/state'
+import { markCounted, usesSinceLastCommit } from '../../agents/checkpoints'
+import { detect } from '../../agents/detect'
+import { usesCost } from '../../pricing/cost'
+import { claimPriceRefresh, loadPriceList } from '../../pricing/prices'
+import { costTrailer } from '../../trailers/cost'
+import { markTrailer } from '../../trailers/mark'
+import { messageCost, writeTrailer } from '../../trailers/message'
 import { SKIPPED_SOURCES } from './constants'
 
-import type { AgentId, Detection, PriceList } from '../../agents/types'
+import type { AgentId, Detection } from '../../agents/types'
+import type { PriceList } from '../../pricing/types'
 import type { Env } from '../../system/types'
 
 /**
@@ -38,15 +34,7 @@ export async function markMessage(
 
     const trailer = markTrailer(detection)
 
-    await git([
-        'interpret-trailers',
-        '--in-place',
-        '--if-exists',
-        'addIfDifferent',
-        '--trailer',
-        trailer,
-        messageFile,
-    ])
+    await writeTrailer(messageFile, trailer, 'addIfDifferent')
 
     return trailer
 }
@@ -57,11 +45,10 @@ export async function markMessage(
  * @param env - the environment
  */
 function refreshPricesIfDue(env: Env = process.env): void {
-    if (!priceRefreshDue(env)) {
+    if (!claimPriceRefresh(env)) {
         return
     }
 
-    writeState(PRICE_REFRESH_STATE, String(Date.now()), env)
     /*
      * update-notifier's recipe: detached, output ignored, unreferenced, so the
      * hook exits without waiting. A child that can't start emits `error`,
@@ -111,17 +98,9 @@ export async function costMessage(
     if (use.uses.length > 0 && usd !== null) {
         const total = (messageCost(readFileSync(messageFile, 'utf8')) ?? 0) + usd
 
-        trailer = `${COST_TRAILER_KEY}: ${costValue(total)}`
+        trailer = costTrailer(total)
 
-        await git([
-            'interpret-trailers',
-            '--in-place',
-            '--if-exists',
-            'replace',
-            '--trailer',
-            trailer,
-            messageFile,
-        ])
+        await writeTrailer(messageFile, trailer, 'replace')
     }
 
     markCounted(agent, use, env)

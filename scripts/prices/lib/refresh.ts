@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs'
 
-import { PRICES_FILE } from '../../../src/agents/constants'
-import { fetchPriceList } from '../../../src/agents/prices'
+import { PRICES_FILE } from '../../../src/pricing/constants'
+import { fetchPriceList } from '../../../src/pricing/prices'
 
 /**
  * Fetch models.dev's catalog and write the price list modelmark ships.

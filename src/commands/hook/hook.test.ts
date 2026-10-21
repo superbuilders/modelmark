@@ -5,10 +5,11 @@ import { join } from 'node:path'
 
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { detect } from '../../agents/mark'
+import { detect } from '../../agents/detect'
 import { costMessage, hookCommand, markMessage } from './hook'
 
-import type { Detection, PriceList } from '../../agents/types'
+import type { Detection } from '../../agents/types'
+import type { PriceList } from '../../pricing/types'
 
 vi.mock(import('node:child_process'), async importOriginal => ({
     ...(await importOriginal()),
@@ -19,7 +20,7 @@ vi.mock(import('node:child_process'), async importOriginal => ({
     }) as unknown as typeof spawn,
 }))
 
-vi.mock(import('../../agents/mark'), async importOriginal => ({
+vi.mock(import('../../agents/detect'), async importOriginal => ({
     ...(await importOriginal()),
     detect: vi.fn(),
 }))

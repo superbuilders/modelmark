@@ -31,7 +31,7 @@ export function* recordsFromEnd(
     path: string,
     keep: readonly string[] = [],
     chunkBytes = TAIL_CHUNK_BYTES,
-): Generator<unknown> {
+): Generator {
     const fd = openSync(path, 'r')
     /*
      * One buffer serves every read, instead of a new one per chunk; an

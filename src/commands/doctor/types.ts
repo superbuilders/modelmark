@@ -1,5 +1,5 @@
 import type { AgentId, Detection, Platform, TestedRecord } from '../../agents/types'
-import type { HookFile, HookStyle } from '../../system/types'
+import type { HookFile, HookStyle } from '../../setup/types'
 
 /**
  * How one doctor check came out: `fail` makes `doctor` exit 1.

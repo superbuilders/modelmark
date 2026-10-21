@@ -1,24 +1,23 @@
-import { PRICES_FILE, UNKNOWN_MODEL } from '../../agents/constants'
-import { modelId, priceOf } from '../../agents/cost'
-import { parseMark } from '../../agents/mark'
-import { MARK_LINE } from '../../agents/patterns'
-import { fetchPriceList, loadPriceList, priceListFetchedAt } from '../../agents/prices'
+import { modelId, priceOf } from '../../pricing/cost'
+import { loadPriceList, priceListFetchedAt, savePriceList } from '../../pricing/prices'
 import { runCommand } from '../../system/command'
 import { markdownTable } from '../../system/markdown'
-import { cachePath, writeWhole } from '../../system/state'
+import { UNKNOWN_MODEL } from '../../trailers/constants'
+import { parseMark } from '../../trailers/mark'
+import { marksIn } from '../../trailers/message'
 import { INPUT_RATE, NO_PRICE, PRICE_HEADER, WORD_COLUMNS } from './constants'
 
-import type { ModelPrice, Rates } from '../../agents/types'
+import type { ModelPrice, Rates } from '../../pricing/types'
 import type { Env } from '../../system/types'
 import type { PricesOptions } from './types'
 
 /**
- * Fetch the latest prices into the cache folder, where every later commit
- * finds them. The hook starts this in the background, so nobody waits on it.
+ * Fetch the latest prices into the cache folder. The hook starts this in the
+ * background, so nobody waits on it.
  * @param env - the environment
  */
 export async function refreshPricesCommand(env = process.env): Promise<void> {
-    writeWhole(cachePath(PRICES_FILE, env), `${JSON.stringify(await fetchPriceList())}\n`)
+    await savePriceList(env)
 }
 
 /**
@@ -34,9 +33,7 @@ async function markedModels(cwd?: string): Promise<string[]> {
         return []
     }
 
-    const models = Array.from(log.stdout.matchAll(MARK_LINE), ([, mark]) =>
-        modelId(parseMark(mark.trim()).model),
-    )
+    const models = marksIn(log.stdout).map(mark => modelId(parseMark(mark).model))
 
     return [...new Set(models)].filter(model => model && model !== UNKNOWN_MODEL).toSorted()
 }

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 
-import { git } from './command'
+import { git } from '../system/command'
 import { HOOK_LINES, HOOK_NAME, PACKAGE_NAME } from './constants'
 
 import type { HookFile, HookStyle } from './types'

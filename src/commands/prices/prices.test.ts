@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
-import { CATALOG_URL } from '../../agents/constants'
+import { CATALOG_URL } from '../../pricing/constants'
 import { git } from '../../system/command'
 import { pricesCommand, refreshPricesCommand } from './prices'
 

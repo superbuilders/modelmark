@@ -1,9 +1,12 @@
 import { basename } from 'node:path'
 
-import { HARNESS_COMMANDS, MAX_TREE_DEPTH, SCRIPT_RUNTIMES } from './constants'
+import { readProcessTable } from '../system/processes'
+import { parseMark } from '../trailers/mark'
+import { DECLARED_MARK, HARNESS_COMMANDS, MAX_TREE_DEPTH, SCRIPT_RUNTIMES } from './constants'
+import { readModelUse } from './models'
 
 import type { ProcessTable, Env } from '../system/types'
-import type { AgentId, FoundAgent } from './types'
+import type { AgentId, Detection, FoundAgent } from './types'
 
 /** Each harness's executable name (the command's first word, without its folder), to the agent it starts. */
 const AGENTS_BY_EXECUTABLE = new Map(
@@ -117,4 +120,45 @@ export function findAgent(
     const marked = walked === 'blocked' ? agentFromMarkers(env) : undefined
 
     return marked ? { agent: marked, via: 'environment' } : null
+}
+
+/**
+ * The mark an agent modelmark doesn't know declares in `MODELMARK`.
+ * @param env - the environment
+ * @returns the detection, or null when none is declared
+ */
+function declaredMark(env: Env): Detection | null {
+    const value = env[DECLARED_MARK]?.trim()
+
+    if (!value) {
+        return null
+    }
+
+    const { agent, model, effort } = parseMark(value)
+
+    return agent ? { agent, via: 'declared', model: model || null, effort: effort || null } : null
+}
+
+/**
+ * Find the agent running this command, and the model and effort behind its latest reply.
+ *
+ * A known agent in the process tree wins over a declared mark, which an inner
+ * process inherits like any other variable; a declared mark wins over the
+ * environment markers known agents leave.
+ * @param env - the environment (default: this process's)
+ * @param startPid - where the process walk starts (default: this process's parent)
+ * @returns the detection, or null when no agent is running this command
+ */
+export async function detect(
+    env: Env = process.env,
+    startPid = process.ppid,
+): Promise<Detection | null> {
+    const found = findAgent(await readProcessTable(), startPid, env)
+    const declared = declaredMark(env)
+
+    if (declared && found?.via !== 'process-tree') {
+        return declared
+    }
+
+    return found ? { ...found, ...readModelUse(found.agent, env) } : null
 }

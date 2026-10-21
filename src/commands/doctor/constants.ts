@@ -1,4 +1,4 @@
-import type { HookStyle } from '../../system/types'
+import type { HookStyle } from '../../setup/types'
 import type { CheckLevel } from './types'
 
 /** The symbol each check level prints with. */

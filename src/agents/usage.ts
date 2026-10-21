@@ -1,12 +1,14 @@
 import { statSync } from 'node:fs'
 
 import { recordsFromEnd } from '../system/tail'
-import { CLAUDE_SYNTHETIC_MODEL, CODEX_KEYS, UNKNOWN_MODEL, USAGE_KEYS } from './constants'
+import { UNKNOWN_MODEL } from '../trailers/constants'
+import { CLAUDE_SYNTHETIC_MODEL, CODEX_KEYS, USAGE_KEYS } from './constants'
 import { claudeCodeLogs, codexLog } from './logs'
 import { countAt, recordTime, stringAt, valueAt } from './records'
 
+import type { TokenUse } from '../pricing/types'
 import type { Env } from '../system/types'
-import type { AgentId, LoggedUse, TokenUse } from './types'
+import type { AgentId, LoggedUse } from './types'
 
 /**
  * Whether a record was written at or before a point in time, so it and every

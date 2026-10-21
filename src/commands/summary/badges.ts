@@ -1,4 +1,5 @@
-import { harnessName, parseMark } from '../../agents/mark'
+import { harnessName } from '../../agents/names'
+import { parseMark } from '../../trailers/mark'
 import {
     BADGE_COST_COLOR,
     BADGE_DARK,

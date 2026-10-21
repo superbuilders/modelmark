@@ -105,10 +105,25 @@ the tags and where fakes live.
 ## Source layout
 
 `src/` is layered, and each layer imports only from the layers below it:
-`cli.ts`, then `commands/` (one folder per command), `agents/` (finding the
-agent and reading its model), and `system/` (helpers with no agent knowledge:
-the process table, reading a log from its end, git). Sibling folders do not
-import each other unless `.oxlint/boundaries/layers.json` names the edge. The
+
+- `cli.ts`, then `program/` (the command-line wiring), then `commands/` (one
+  folder per command).
+- `agents/`: finding the harness (process walk, `MODELMARK`) and reading its
+  logs: the model, the effort, each reply's tokens, and where the last commit
+  stopped counting (`checkpoints.ts`).
+- `pricing/`: the price list (shipped, cached, refreshed from models.dev) and
+  what tokens cost. It knows nothing about harnesses.
+- `trailers/`: the commit-message format: writing and parsing `Assisted-by`
+  and `Assisted-cost` lines, and finding them in a message.
+- `setup/`: whether and how a repository runs modelmark's hook (`install` and
+  `doctor` share it).
+- `system/`: generic helpers: the process table, reading
+  a log from its end, git, state files, Markdown tables.
+
+`agents/` may use `pricing/` (its token counts are pricing's `TokenUse`) and
+`trailers/` (a declared `MODELMARK` is a mark). `pricing/`, `trailers/` and
+`setup/` use only `system/`. Sibling folders do not import each other unless
+`.oxlint/boundaries/layers.json` names the edge. The
 `boundaries/layer-imports` rule enforces that map. A new folder inherits the
 edges of its mapped ancestors; give it its own entry only when it needs an edge
 they lack. Move code down a layer rather than adding an upward edge.
@@ -145,7 +160,7 @@ id. Codex writes a `token_usage_record` after each reply, before the tool it
 asked for runs, so the commit's own reply is counted.
 
 Each reply is priced on its own from models.dev's first-party prices
-(`agents/prices.ts`); a context tier prices the whole reply. The package ships
+(`pricing/`); a context tier prices the whole reply. The package ships
 `prices.json` (`scripts/prices` refreshes it), and the hook lays the copy in
 `$XDG_CACHE_HOME/modelmark/prices.json` over it. After costing, the hook
 may start the hidden `refresh-prices` command detached (README, "Fresh

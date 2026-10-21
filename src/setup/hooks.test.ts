@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 import { describe, expect, test } from 'vitest'
 
-import { git } from './command'
+import { git } from '../system/command'
 import { HOOK_LINES } from './constants'
 import { findHookFile, hookStyle, wantedStyle } from './hooks'
 

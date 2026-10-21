@@ -2,15 +2,17 @@ import { existsSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 import { HARNESS_COMMANDS, HARNESS_NAMES, PLATFORM_NAMES } from '../../agents/constants'
-import { detect, harnessName, markTrailer } from '../../agents/mark'
+import { detect } from '../../agents/detect'
+import { harnessName } from '../../agents/names'
 import {
     currentPlatform,
     installedVersion,
     readTestedRecord,
     testedVersion,
 } from '../../agents/versions'
-import { LOCAL_BIN } from '../../system/constants'
-import { findHookFile, hookStyle, wantedStyle } from '../../system/hooks'
+import { LOCAL_BIN } from '../../setup/constants'
+import { findHookFile, hookStyle, wantedStyle } from '../../setup/hooks'
+import { markTrailer } from '../../trailers/mark'
 import { LEVEL_SYMBOLS, RUNS_FROM } from './constants'
 
 import type { AgentId } from '../../agents/types'

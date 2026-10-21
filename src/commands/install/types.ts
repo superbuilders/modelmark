@@ -1,4 +1,4 @@
-import type { HookFile, HookStyle } from '../../system/types'
+import type { HookFile, HookStyle } from '../../setup/types'
 
 /**
  * What `install` did.

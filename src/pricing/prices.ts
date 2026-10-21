@@ -1,7 +1,7 @@
 import { readFileSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-import { cachePath, readState } from '../system/state'
+import { cachePath, readState, writeState, writeWhole } from '../system/state'
 import {
     CATALOG_URL,
     CI_VARIABLES,
@@ -83,6 +83,23 @@ export function priceRefreshDue(env: Env, now = Date.now()): boolean {
 }
 
 /**
+ * Claim the next price refresh: when one is due, record it as started, so
+ * commits in the hour after it don't start their own.
+ * @param env - the environment
+ * @param now - the time (ms since the epoch)
+ * @returns true when this caller should refresh
+ */
+export function claimPriceRefresh(env: Env, now = Date.now()): boolean {
+    if (!priceRefreshDue(env, now)) {
+        return false
+    }
+
+    writeState(PRICE_REFRESH_STATE, String(now), env)
+
+    return true
+}
+
+/**
  * Fetch models.dev's catalog as a price list.
  * @returns the prices
  */
@@ -96,6 +113,15 @@ export async function fetchPriceList(): Promise<PriceList> {
     }
 
     return priceList((await response.json()) as Catalog)
+}
+
+/**
+ * Fetch the latest prices into the cache folder, where every later commit
+ * finds them.
+ * @param env - the environment
+ */
+export async function savePriceList(env: Env): Promise<void> {
+    writeWhole(cachePath(PRICES_FILE, env), `${JSON.stringify(await fetchPriceList())}\n`)
 }
 
 /**

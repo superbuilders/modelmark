@@ -1,8 +1,8 @@
-import { messageCost } from '../../agents/cost'
-import { harnessName, parseMark } from '../../agents/mark'
-import { MARK_LINE } from '../../agents/patterns'
+import { harnessName } from '../../agents/names'
 import { git, runCommand } from '../../system/command'
 import { markdownTable } from '../../system/markdown'
+import { parseMark } from '../../trailers/mark'
+import { marksIn, messageCost } from '../../trailers/message'
 import { summaryBadges } from './badges'
 import { COMMIT_SEPARATOR, DEFAULT_BRANCHES, NO_MARK, NO_MARK_ROW } from './constants'
 import { commitsText, costText } from './words'
@@ -24,7 +24,7 @@ export async function summarize(range: string, cwd?: string): Promise<Summary> {
     let unmarked = 0
 
     for (const commit of commits) {
-        const marks = new Set(Array.from(commit.matchAll(MARK_LINE), ([, mark]) => mark.trim()))
+        const marks = new Set(marksIn(commit))
 
         if (marks.size === 0) {
             unmarked++

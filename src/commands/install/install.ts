@@ -2,10 +2,10 @@ import { existsSync } from 'node:fs'
 import { chmod, mkdir, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 
-import { HOOK_LINES, LOCAL_BIN } from '../../system/constants'
-import { findHookFile, hookStyle, wantedStyle } from '../../system/hooks'
+import { HOOK_LINES, LOCAL_BIN } from '../../setup/constants'
+import { findHookFile, hookStyle, wantedStyle } from '../../setup/hooks'
 
-import type { HookFile, HookStyle } from '../../system/types'
+import type { HookFile, HookStyle } from '../../setup/types'
 import type { InstallResult } from './types'
 
 /**

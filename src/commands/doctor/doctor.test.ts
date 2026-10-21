@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
-import { detect } from '../../agents/mark'
+import { detect } from '../../agents/detect'
 import { installedVersion } from '../../agents/versions'
-import { HOOK_LINES } from '../../system/constants'
-import { findHookFile } from '../../system/hooks'
+import { HOOK_LINES } from '../../setup/constants'
+import { findHookFile } from '../../setup/hooks'
 import { doctorChecks, doctorCommand } from './doctor'
 
-import type { HookFile } from '../../system/types'
+import type { HookFile } from '../../setup/types'
 import type { DoctorFacts } from './types'
 
-vi.mock(import('../../agents/mark'), async importOriginal => ({
+vi.mock(import('../../agents/detect'), async importOriginal => ({
     ...(await importOriginal()),
     detect: vi.fn(),
 }))
@@ -19,7 +19,7 @@ vi.mock(import('../../agents/versions'), async importOriginal => ({
     installedVersion: vi.fn(),
 }))
 
-vi.mock(import('../../system/hooks'), async importOriginal => ({
+vi.mock(import('../../setup/hooks'), async importOriginal => ({
     ...(await importOriginal()),
     findHookFile: vi.fn(),
 }))

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { costValue, messageCost, usesCost } from './cost'
+import { usesCost } from './cost'
 import { readPriceList, SHIPPED_PRICES } from './prices'
 
 import type { PriceList, TokenUse } from './types'
@@ -68,23 +68,6 @@ describe('usesCost', () => {
     test('no replies cost nothing', () => {
         expect(usesCost([], PRICES)).toBe(0)
     })
-})
-
-describe('messageCost', () => {
-    test('adds up every cost line, anywhere in the message', () => {
-        expect(
-            messageCost('Squash\n\n* one\n\nAssisted-cost: $1.25\n\n* two\n\nassisted-cost: 0.5\n'),
-        ).toBeCloseTo(1.75)
-    })
-
-    test('a message without one has no cost', () => {
-        expect(messageCost('Fix it\n\nAssisted-by: pi:kimi-k3\n')).toBeUndefined()
-    })
-})
-
-test('costValue writes dollars and cents, and four places under a cent', () => {
-    expect(costValue(1.844)).toBe('$1.84')
-    expect(costValue(0.00314)).toBe('$0.0031')
 })
 
 test('the shipped price list has the models modelmark is tested with', () => {
