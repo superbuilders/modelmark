@@ -23,6 +23,20 @@ function notAfter(record: unknown, since: number | undefined): boolean {
 }
 
 /**
+ * Whether a record is known to come after a point in time. A record with no
+ * time can't be placed, so once a commit has been counted it is left out
+ * rather than charged again.
+ * @param record - a parsed log record
+ * @param since - the point (ms since the epoch), or undefined to count everything
+ * @returns true when the record counts
+ */
+function isNew(record: unknown, since: number | undefined): boolean {
+    const time = recordTime(record)
+
+    return since === undefined || (time !== undefined && time > since)
+}
+
+/**
  * The newer of two times, either of which may be missing.
  * @param a - a time
  * @param b - another
@@ -70,6 +84,10 @@ function claudeCodeUse(env: Env, since: number | undefined): LoggedUse | undefin
         for (const record of recordsFromEnd(log, USAGE_KEYS)) {
             if (notAfter(record, since)) {
                 break
+            }
+
+            if (!isNew(record, since)) {
+                continue
             }
 
             const model = stringAt(record, 'message', 'model')
@@ -135,7 +153,7 @@ function codexUse(env: Env, since: number | undefined): LoggedUse | undefined {
     for (const record of recordsFromEnd(log, CODEX_KEYS)) {
         const type = stringAt(record, 'type')
 
-        if (type === 'token_usage_record' && !notAfter(record, since)) {
+        if (type === 'token_usage_record' && isNew(record, since)) {
             records.push(record)
         } else if (type === 'turn_context') {
             records.push(record)
@@ -194,6 +212,10 @@ function piUse(env: Env, since: number | undefined): LoggedUse | undefined {
     for (const record of recordsFromEnd(log, USAGE_KEYS)) {
         if (notAfter(record, since)) {
             break
+        }
+
+        if (!isNew(record, since)) {
+            continue
         }
 
         const model = stringAt(record, 'message', 'model')

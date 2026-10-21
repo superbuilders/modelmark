@@ -135,6 +135,20 @@ describe('Claude Code', () => {
         expect(use?.uses.map(({ output }) => output).toSorted()).toEqual([2, 7])
     })
 
+    test('a reply with no time counts only before the first commit', () => {
+        const config = scratch()
+        const { timestamp: _, ...untimed } = claudeReply('10:00', 'm1', { output_tokens: 3 }) as {
+            timestamp: string
+        }
+
+        writeLog(join(config, 'projects', '-repo', 's1.jsonl'), [untimed])
+
+        const env = { CLAUDE_CODE_SESSION_ID: 's1', CLAUDE_CONFIG_DIR: config }
+
+        expect(readSessionUse('claude-code', env, undefined)?.uses).toHaveLength(1)
+        expect(readSessionUse('claude-code', env, at('09:00'))?.uses).toEqual([])
+    })
+
     test('a missing session gives nothing', () => {
         expect(readSessionUse('claude-code', {}, undefined)).toBeUndefined()
     })
