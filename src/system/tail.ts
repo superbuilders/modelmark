@@ -33,22 +33,23 @@ export function* recordsFromEnd(
     chunkBytes = TAIL_CHUNK_BYTES,
 ): Generator<unknown> {
     const fd = openSync(path, 'r')
+    /*
+     * One buffer serves every read, so a chunk without any wanted text costs
+     * a read and a search, never an allocation or a copy.
+     */
+    const buffer = Buffer.allocUnsafe(chunkBytes)
 
     try {
         let end = fstatSync(fd).size
         /*
-         * Chunks after the earliest newline seen so far that are not yet a whole
-         * line: the next (earlier) chunk completes them. They hold no newline,
-         * so only each new chunk is searched, and they are joined once.
+         * Copies of what follows the earliest newline seen so far that are not
+         * yet a whole line: the next (earlier) chunk completes them.
          */
         let carry: Buffer[] = []
 
         while (end > 0) {
             const start = Math.max(0, end - chunkBytes)
-            const chunk = Buffer.alloc(end - start)
-
-            readSync(fd, chunk, 0, chunk.length, start)
-
+            const chunk = buffer.subarray(0, readSync(fd, buffer, 0, end - start, start))
             /*
              * Everything before the first newline may continue in an earlier
              * chunk, unless this chunk starts the file.
@@ -58,27 +59,34 @@ export function* recordsFromEnd(
             end = start
 
             if (start > 0 && cut === -1) {
-                carry = [chunk, ...carry]
+                carry = [Buffer.from(chunk), ...carry]
 
                 continue
             }
 
-            const block = Buffer.concat([chunk, ...carry]).subarray(cut + 1)
-
-            carry = [chunk.subarray(0, Math.max(cut, 0))]
-
+            const lines = chunk.subarray(cut + 1)
             /*
-             * A block without any wanted text holds no wanted line, so it
-             * needn't be decoded.
+             * A wanted text sits inside one line: a whole one in this chunk,
+             * or the line this chunk ends with, which the carry continues.
              */
-            if (keep.length > 0 && !keep.some(text => block.includes(text))) {
+            const open =
+                carry.length > 0
+                    ? Buffer.concat([lines.subarray(lines.lastIndexOf('\n') + 1), ...carry])
+                    : undefined
+            const wanted =
+                keep.length === 0 || keep.some(text => lines.includes(text) || open?.includes(text))
+            const block = wanted ? Buffer.concat([lines, ...carry]).toString('utf8') : ''
+
+            carry = [Buffer.from(chunk.subarray(0, Math.max(cut, 0)))]
+
+            if (!wanted) {
                 continue
             }
 
-            const lines = block.toString('utf8').split('\n')
+            const records = block.split('\n')
 
-            for (let index = lines.length - 1; index >= 0; index--) {
-                const line = lines[index]
+            for (let index = records.length - 1; index >= 0; index--) {
+                const line = records[index]
 
                 if (line && (keep.length === 0 || keep.some(text => line.includes(text)))) {
                     yield parseLine(line)

@@ -140,10 +140,11 @@ export function messageCost(message: string): number | undefined {
 }
 
 /**
- * A cost as the trailer writes it.
+ * A cost as the trailer writes it: dollars and cents, or four places under a
+ * cent so a cheap commit's cost still adds up in a summary.
  * @param usd - US dollars
- * @returns `$1.84`
+ * @returns `$1.84`, or `$0.0031`
  */
 export function costValue(usd: number): string {
-    return `$${usd.toFixed(2)}`
+    return `$${usd.toFixed(usd < 0.01 ? 4 : 2)}`
 }

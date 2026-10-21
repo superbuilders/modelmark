@@ -28,6 +28,8 @@ export interface Scenario {
     harnesses: AgentId[]
     /** The trailers the newest commit must carry, in order. */
     expected: ExpectedMark[]
+    /** False when the commit has no log to price, so it must carry no cost line. */
+    priced?: false
     /** Makes the commit (or commits) in the workspace. */
     run: (workspace: ScenarioWorkspace) => Promise<void>
 }
@@ -72,6 +74,8 @@ export interface ScenarioResult {
     reason?: string
     /** The newest commit's Assisted-by values. */
     trailers?: string[]
+    /** The newest commit's Assisted-cost values. */
+    costs?: string[]
     /** How long each hook run took, in milliseconds. */
     hookMs?: number[]
     /** Wall time of the whole scenario. */

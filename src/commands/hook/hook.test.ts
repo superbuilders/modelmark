@@ -167,6 +167,24 @@ describe('costMessage', () => {
         expect(readFileSync(path, 'utf8')).toBe('One\n\nAssisted-cost: $3.00\n')
     })
 
+    test('a cheap commit still gets its cost', async () => {
+        const { env, reply } = session()
+        const path = messageFile('One\n')
+
+        reply(100)
+        expect(await costMessage(path, 'claude-code', env, PRICES)).toBe('Assisted-cost: $0.0020')
+    })
+
+    test('an amend with no new replies keeps its cost', async () => {
+        const { env, reply } = session()
+        const path = messageFile('One\n')
+
+        reply(50_000)
+        await costMessage(path, 'claude-code', env, PRICES)
+        expect(await costMessage(path, 'claude-code', env, PRICES)).toBeNull()
+        expect(readFileSync(path, 'utf8')).toBe('One\n\nAssisted-cost: $1.00\n')
+    })
+
     test('replies without a price get no cost, and still count as used', async () => {
         const { env, reply } = session()
         const path = messageFile('One\n')

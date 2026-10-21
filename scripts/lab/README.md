@@ -32,12 +32,14 @@ the modelmark hook from this checkout installed. The scenario asks a real agent
 to run one exact `git commit` (cheapest models, one-line prompts), then checks:
 
 - the newest commit's `Assisted-by` trailers are exactly the expected ones;
+- a marked commit has one `Assisted-cost` line, and an unmarked one (or one
+  with no log to price, like Pi without a session file) has none;
 - every hook run took at most 500 ms, Bun's startup included;
 - the hook printed nothing (a warning means a commit went unmarked).
 
 Two scenarios need no model: `leaked-env` commits with an agent's variables set
 but no agent above it in the process tree (expecting no mark), and `big-log`
-reads a 300 MB session log. They start the commit in a backgrounded subshell
+reads and prices a 300 MB session log. They start the commit in a backgrounded subshell
 whose parent exits, so the system's first process adopts it; that keeps the
 agent you may be running the lab from out of the process tree.
 

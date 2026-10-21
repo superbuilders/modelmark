@@ -57,20 +57,16 @@ function claudeReply(time: string, id: string, usage: object): object {
 }
 
 /**
- * A Codex token count record.
+ * A Codex reply's token record.
  * @param time - `hh:mm`
- * @param total - the thread's running total
- * @param last - the reply's usage
+ * @param usage - the reply's usage
  * @returns the record
  */
-function codexCount(time: string, total: number, last: object): object {
+function codexUsage(time: string, usage: object): object {
     return {
         timestamp: new Date(at(time)).toISOString(),
-        type: 'event_msg',
-        payload: {
-            type: 'token_count',
-            info: { total_token_usage: { total_tokens: total }, last_token_usage: last },
-        },
+        type: 'token_usage_record',
+        payload: { response_id: `resp_${time}`, usage, thread_token_usage: usage },
     }
 }
 
@@ -147,7 +143,7 @@ describe('Claude Code', () => {
 
 describe('Codex', () => {
     /**
-     * A thread whose second reply is repeated when only its rate limits changed.
+     * A thread of three replies over two turns.
      * @returns its environment
      */
     function thread(): Record<string, string> {
@@ -155,31 +151,31 @@ describe('Codex', () => {
 
         writeLog(join(home, 'sessions', '2026', '10', '20', 'rollout-x-t1.jsonl'), [
             codexTurn('09:00', 'gpt-5.6-terra'),
-            codexCount('09:01', 110, {
+            codexUsage('09:01', {
                 input_tokens: 100,
                 cached_input_tokens: 0,
                 output_tokens: 10,
             }),
-            codexCount('10:01', 330, {
+            {
+                timestamp: new Date(at('09:02')).toISOString(),
+                type: 'event_msg',
+                payload: { type: 'token_count' },
+            },
+            codexUsage('10:01', {
                 input_tokens: 200,
                 cached_input_tokens: 150,
                 cache_write_input_tokens: 20,
                 output_tokens: 20,
                 reasoning_output_tokens: 5,
             }),
-            codexCount('10:02', 330, {
-                input_tokens: 200,
-                cached_input_tokens: 150,
-                output_tokens: 20,
-            }),
             codexTurn('11:00', 'gpt-6.1-sol'),
-            codexCount('11:01', 340, { input_tokens: 9, output_tokens: 1 }),
+            codexUsage('11:01', { input_tokens: 9, output_tokens: 1 }),
         ])
 
         return { CODEX_THREAD_ID: 't1', CODEX_HOME: home }
     }
 
-    test('takes cached and written input out of input, and skips repeats', () => {
+    test('takes cached and written input out of input', () => {
         const use = readSessionUse('codex', thread(), undefined)
 
         expect(use?.uses).toEqual([
@@ -190,7 +186,7 @@ describe('Codex', () => {
         expect(use?.through).toBe(at('11:01'))
     })
 
-    test("a repeat just after the point isn't counted again", () => {
+    test('counts only replies after the point', () => {
         const use = readSessionUse('codex', thread(), at('10:01'))
 
         expect(use?.uses).toEqual([

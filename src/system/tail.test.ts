@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 import { describe, expect, test } from 'vitest'
 
-import { findLast } from './tail'
+import { findLast, recordsFromEnd } from './tail'
 
 /**
  * Write lines to a fresh temporary file.
@@ -56,4 +56,20 @@ describe('findLast', () => {
         expect(findLast(logWith(['{"other":true}']), pickN)).toBeUndefined()
         expect(findLast(logWith([]), pickN)).toBeUndefined()
     })
+})
+
+describe('recordsFromEnd', () => {
+    const path = logWith([
+        JSON.stringify({ n: 1, usage: true }),
+        JSON.stringify({ pad: 'y'.repeat(300) }),
+        JSON.stringify({ n: 2, pad: 'z'.repeat(200), usage: true }),
+        JSON.stringify({ pad: 'y'.repeat(30) }),
+    ])
+
+    test.each([1, 5, 9, 64, 100_000])(
+        'yields only lines with a wanted text, wherever the reads split them (%i-byte chunks)',
+        chunk => {
+            expect([...recordsFromEnd(path, ['"usage"'], chunk)].map(pickN)).toEqual([2, 1])
+        },
+    )
 })

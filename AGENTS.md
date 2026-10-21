@@ -140,8 +140,8 @@ into four buckets that never overlap: fresh input, cache reads, cache writes
 and output. Claude Code's and Pi's input already leaves out the cache; Codex's
 includes it and is subtracted. Thinking is inside output everywhere. Claude
 Code repeats a reply's record, so a reply counts once per message and request
-id; Codex repeats `token_count` when only rate limits change, so one counts
-only when the running total moved.
+id. Codex writes a `token_usage_record` after each reply, before the tool it
+asked for runs, so the commit's own reply is counted.
 
 Each reply is priced on its own from `prices.json`, a trimmed copy of
 models.dev's first-party prices (`scripts/prices`); a context tier prices the

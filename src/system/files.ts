@@ -68,23 +68,13 @@ export function filesEndingWith(dir: string, suffix: string): string[] {
 }
 
 /**
- * Pick the most recently written of several files.
- * @param first - an existing file, kept unless another is newer
- * @param others - other candidate files that exist
- * @returns the newest path
+ * Order files from the most recently written.
+ * @param paths - files that exist
+ * @returns the same paths, newest first
  */
-export function newestFile(first: string, others: string[]): string {
-    let newest = first
-    let newestTime = statSync(first).mtimeMs
-
-    for (const path of others) {
-        const time = statSync(path).mtimeMs
-
-        if (time > newestTime) {
-            newest = path
-            newestTime = time
-        }
-    }
-
-    return newest
+export function newestFirst(paths: string[]): string[] {
+    return paths
+        .map(path => ({ path, time: statSync(path).mtimeMs }))
+        .toSorted((a, b) => b.time - a.time)
+        .map(({ path }) => path)
 }

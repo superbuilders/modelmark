@@ -153,7 +153,10 @@ subscription or a negotiated rate costs something else.
 - **An amend** adds its new replies to the cost already there. `summary`
   splits a commit with two marks evenly between them.
 - **Agents modelmark doesn't know** (`MODELMARK`) get no cost, since
-  modelmark can't read their logs.
+  modelmark can't read their logs. Neither does Pi without a session file
+  (`--no-session`), which keeps no log.
+- **A cost under a cent** is written to four places (`$0.0031`), so cheap
+  commits still add up in `summary`.
 
 ## Supported harnesses
 
@@ -188,9 +191,9 @@ The newest version of each harness that passed every
 
 | Harness     | Linux   | macOS   |
 | ----------- | ------- | ------- |
-| Claude Code | 2.1.303 | 2.1.299 |
+| Claude Code | 2.1.305 | 2.1.304 |
 | Codex       | 0.154.0 | 0.163.0 |
-| Pi          | 0.85.1  | 0.84.3  |
+| Pi          | 1.3.0   | 0.84.3  |
 
 <!-- /lab:tested -->
 

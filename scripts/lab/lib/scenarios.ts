@@ -141,6 +141,7 @@ export const SCENARIOS: readonly Scenario[] = [
         description: 'Pi without a session file commits; the model comes from PI_MODEL',
         harnesses: ['pi'],
         expected: [`pi:${MODELS.pi}@medium`],
+        priced: false,
         run: async workspace => {
             await workspace.agent(
                 pi(runPrompt(COMMIT), { model: MODELS.pi, effort: 'medium', sessions: null }),
@@ -231,7 +232,11 @@ export const SCENARIOS: readonly Scenario[] = [
 async function writeBigLog(path: string): Promise<void> {
     const line = `${JSON.stringify({ type: 'user', message: { role: 'user', content: 'x'.repeat(1000) } })}\n`
     const chunk = Buffer.from(line.repeat(Math.ceil((1024 * 1024) / line.length)))
-    const reply = { type: 'assistant', effort: 'high', message: { model: 'claude-opus-5-5' } }
+    const reply = {
+        type: 'assistant',
+        effort: 'high',
+        message: { model: 'claude-opus-5-5', usage: { input_tokens: 1000, output_tokens: 100 } },
+    }
 
     await mkdir(join(path, '..'), { recursive: true })
 

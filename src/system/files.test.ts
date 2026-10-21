@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 import { describe, expect, test } from 'vitest'
 
-import { filesEndingWith, findFileNewestFirst, newestFile } from './files'
+import { filesEndingWith, findFileNewestFirst, newestFirst } from './files'
 
 /**
  * Create an empty file, with its folders.
@@ -52,14 +52,13 @@ describe('filesEndingWith', () => {
     })
 })
 
-describe('newestFile', () => {
-    test('keeps the first file unless another was written later', () => {
+describe('newestFirst', () => {
+    test('orders files from the most recently written', () => {
         const root = mkdtempSync(join(tmpdir(), 'modelmark-files-'))
         const first = touch(join(root, 'first'), 2000)
         const older = touch(join(root, 'older'), 1000)
         const newer = touch(join(root, 'newer'), 3000)
 
-        expect(newestFile(first, [older])).toBe(first)
-        expect(newestFile(first, [older, newer])).toBe(newer)
+        expect(newestFirst([first, older, newer])).toEqual([newer, first, older])
     })
 })

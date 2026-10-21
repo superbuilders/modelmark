@@ -1,6 +1,6 @@
-import { newestFile } from '../system/files'
+import { newestFirst } from '../system/files'
 import { findLast } from '../system/tail'
-import { CLAUDE_SYNTHETIC_MODEL, NO_MODEL_USE } from './constants'
+import { CLAUDE_SHELL_TOOL, CLAUDE_SYNTHETIC_MODEL, NO_MODEL_USE } from './constants'
 import { claudeCodeLogs, codexLog } from './logs'
 import { stringAt } from './records'
 
@@ -18,11 +18,47 @@ function modelUse(model: string | undefined, effort: string | undefined): ModelU
 }
 
 /**
- * The model and effort behind the latest reply in this Claude Code session.
+ * The latest reply in a Claude Code log.
+ * @param log - the log file
+ * @returns the reply record, or undefined when the log has none
+ */
+function latestClaudeReply(log: string): unknown {
+    return findLast(log, record => {
+        const model = stringAt(record, 'message', 'model')
+
+        return stringAt(record, 'type') === 'assistant' && model && model !== CLAUDE_SYNTHETIC_MODEL
+            ? record
+            : undefined
+    })
+}
+
+/**
+ * Whether a Claude Code reply asked to run a shell command.
+ * @param reply - a reply record
+ * @returns true when one of its parts calls the shell tool
+ */
+function asksForShell(reply: unknown): boolean {
+    const content = (reply as { message?: { content?: unknown } }).message?.content
+
+    return (
+        Array.isArray(content) &&
+        content.some(
+            part =>
+                stringAt(part, 'type') === 'tool_use' &&
+                stringAt(part, 'name') === CLAUDE_SHELL_TOOL,
+        )
+    )
+}
+
+/**
+ * The model and effort behind the reply that ran the commit in this Claude
+ * Code session.
  *
- * A subagent's replies go to its own log, so the most recently written log is
- * the conversation that ran the commit. Each reply record names its model
- * and, beside it, the session's effort.
+ * A subagent's replies go to its own log. A subagent can run in the
+ * background while the main conversation keeps replying, so the newest log
+ * isn't always the one committing: the conversation that ran the commit is
+ * the newest whose latest reply asked for the shell. Without one, the newest
+ * reply wins. Each reply record names its model and, beside it, the effort.
  * @param env - the environment
  * @returns the model and effort, or undefined
  */
@@ -33,15 +69,21 @@ function claudeCode(env: Env): ModelUse | undefined {
         return undefined
     }
 
-    const log = newestFile(logs.main, logs.subagents)
+    let newest: unknown
 
-    return findLast(log, record => {
-        const model = stringAt(record, 'message', 'model')
+    for (const log of newestFirst([logs.main, ...logs.subagents])) {
+        const reply = latestClaudeReply(log)
 
-        return stringAt(record, 'type') === 'assistant' && model !== CLAUDE_SYNTHETIC_MODEL
-            ? modelUse(model, stringAt(record, 'effort'))
-            : undefined
-    })
+        newest ??= reply
+
+        if (reply !== undefined && asksForShell(reply)) {
+            newest = reply
+
+            break
+        }
+    }
+
+    return modelUse(stringAt(newest, 'message', 'model'), stringAt(newest, 'effort'))
 }
 
 /**

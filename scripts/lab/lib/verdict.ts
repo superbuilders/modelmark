@@ -10,6 +10,10 @@ interface Evidence {
     expected: ExpectedMark[]
     /** The newest commit's Assisted-by values, or null when no lab commit was made. */
     trailers: string[] | null
+    /** Whether the commit should carry a cost: true whenever it should carry a mark. */
+    costed: boolean
+    /** The newest commit's Assisted-cost values. */
+    costs: string[]
     /** How long each hook run took. */
     hookMs: number[]
     /** What the hook printed to stderr. */
@@ -32,11 +36,11 @@ function matches(expected: ExpectedMark, actual: string | undefined): boolean {
 
 /**
  * Judge a scenario from what it left behind.
- * @param evidence - the commit's trailers and the hook's timings and errors
+ * @param evidence - the commit's trailers and cost, and the hook's timings and errors
  * @returns why it failed, or null when it passed
  */
 export function verdict(evidence: Evidence): string | null {
-    const { expected, trailers, hookMs, hookErrors } = evidence
+    const { expected, trailers, costed, costs, hookMs, hookErrors } = evidence
 
     if (trailers === null) {
         return 'no lab commit was made'
@@ -51,6 +55,10 @@ export function verdict(evidence: Evidence): string | null {
         expected.some((mark, index) => !matches(mark, trailers[index]))
     ) {
         return `expected [${expected.map(String).join(', ')}], got [${trailers.join(', ')}]`
+    }
+
+    if (costs.length !== (costed ? 1 : 0)) {
+        return `expected ${costed ? 'one cost line' : 'no cost line'}, got [${costs.join(', ')}]`
     }
 
     const slowest = Math.max(...hookMs)

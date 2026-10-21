@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 
-import { COST_TRAILER_KEY, SMALLEST_COST } from '../../agents/constants'
+import { COST_TRAILER_KEY } from '../../agents/constants'
 import {
     costValue,
     markCounted,
@@ -72,10 +72,14 @@ export async function costMessage(
     }
 
     const usd = usesCost(use.uses, prices)
-    const total = usd === null ? null : (messageCost(readFileSync(messageFile, 'utf8')) ?? 0) + usd
     let trailer: string | null = null
 
-    if (total !== null && total >= SMALLEST_COST) {
+    /*
+     * An amend with no new replies keeps the cost it has.
+     */
+    if (use.uses.length > 0 && usd !== null) {
+        const total = (messageCost(readFileSync(messageFile, 'utf8')) ?? 0) + usd
+
         trailer = `${COST_TRAILER_KEY}: ${costValue(total)}`
 
         await git([

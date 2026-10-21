@@ -140,6 +140,36 @@ describe('Claude Code', () => {
         ).toBe('claude-sonnet-5')
     })
 
+    test('a background subagent that ran the commit wins over a main log written later', () => {
+        const config = scratch()
+        const main = writeLog(join(config, 'projects', '-repo', 's1.jsonl'), [
+            claudeReply('claude-haiku-5-5'),
+        ])
+        const sub = writeLog(
+            join(config, 'projects', '-repo', 's1', 'subagents', 'agent-a.jsonl'),
+            [
+                {
+                    type: 'assistant',
+                    effort: 'low',
+                    message: {
+                        model: 'claude-sonnet-5-5',
+                        content: [{ type: 'tool_use', name: 'Bash', input: {} }],
+                    },
+                },
+            ],
+        )
+
+        utimesSync(sub, new Date(1000), new Date(1000))
+        utimesSync(main, new Date(2000), new Date(2000))
+
+        expect(
+            readModelUse('claude-code', {
+                CLAUDE_CODE_SESSION_ID: 's1',
+                CLAUDE_CONFIG_DIR: config,
+            }),
+        ).toEqual({ model: 'claude-sonnet-5-5', effort: 'low' })
+    })
+
     test('without CLAUDE_CONFIG_DIR, the log is under ~/.claude', () => {
         const home = scratch()
 

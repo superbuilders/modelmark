@@ -81,8 +81,9 @@ describe('messageCost', () => {
     })
 })
 
-test('costValue writes dollars and cents', () => {
+test('costValue writes dollars and cents, and four places under a cent', () => {
     expect(costValue(1.844)).toBe('$1.84')
+    expect(costValue(0.00314)).toBe('$0.0031')
 })
 
 test('the shipped price list has the models modelmark is tested with', () => {

@@ -114,11 +114,10 @@ function claudeCodeUse(
 /**
  * The replies in this Codex thread after a point.
  *
- * Each reply ends with a `token_count` record holding that reply's usage and
- * the thread's running total. Codex repeats the record when only its rate
- * limits change, so a record counts only when the total moved. The model is
- * the latest `turn_context` before it. Codex's `input_tokens` includes cache
- * reads and writes, and its output includes thinking.
+ * Codex writes a `token_usage_record` right after each reply, before running
+ * the tool the reply asked for, so the commit's own reply is already there.
+ * The model is the latest `turn_context` before it. Codex's `input_tokens`
+ * includes cache reads and writes, and its output includes thinking.
  * @param env - the environment
  * @param since - count only replies after this (ms since the epoch), or everything when undefined
  * @returns the replies and the newest one's time, or undefined when there is no thread
@@ -131,30 +130,19 @@ function codexUse(env: Env, since: number | undefined): Omit<SessionUse, 'sessio
     }
 
     /*
-     * Read back past the point until the turn and running total in force
-     * there are known, then walk forward.
+     * Read back to the turn in force at the point, then walk forward.
      */
     const records: unknown[] = []
-    let turnBefore = false
-    let totalBefore = false
 
     for (const record of recordsFromEnd(log, CODEX_KEYS)) {
-        const type =
-            stringAt(record, 'type') === 'turn_context'
-                ? 'turn'
-                : stringAt(record, 'payload', 'type')
+        const type = stringAt(record, 'type')
 
-        if (type !== 'turn' && type !== 'token_count') {
-            continue
-        }
+        if (type === 'token_usage_record' && !notAfter(record, since)) {
+            records.push(record)
+        } else if (type === 'turn_context') {
+            records.push(record)
 
-        records.push(record)
-
-        if (notAfter(record, since)) {
-            turnBefore ||= type === 'turn'
-            totalBefore ||= type === 'token_count'
-
-            if (turnBefore && totalBefore) {
+            if (notAfter(record, since)) {
                 break
             }
         }
@@ -162,7 +150,6 @@ function codexUse(env: Env, since: number | undefined): Omit<SessionUse, 'sessio
 
     const uses: TokenUse[] = []
     let model: string | undefined
-    let total: number | undefined
     let through: number | undefined
 
     for (const record of records.toReversed()) {
@@ -172,28 +159,16 @@ function codexUse(env: Env, since: number | undefined): Omit<SessionUse, 'sessio
             continue
         }
 
-        const info = (record as { payload: { info?: unknown } }).payload.info
-        const runningTotal = countAt(info, 'total_token_usage', 'total_tokens')
-        const moved = runningTotal !== total
-
-        total = runningTotal
-
-        if (!info || !moved || notAfter(record, since)) {
-            continue
-        }
-
-        const cacheRead = countAt(info, 'last_token_usage', 'cached_input_tokens')
-        const cacheWrite = countAt(info, 'last_token_usage', 'cache_write_input_tokens')
+        const usage = (record as { payload: { usage?: unknown } }).payload.usage
+        const cacheRead = countAt(usage, 'cached_input_tokens')
+        const cacheWrite = countAt(usage, 'cache_write_input_tokens')
 
         uses.push({
             model: model ?? UNKNOWN_MODEL,
-            input: Math.max(
-                0,
-                countAt(info, 'last_token_usage', 'input_tokens') - cacheRead - cacheWrite,
-            ),
+            input: Math.max(0, countAt(usage, 'input_tokens') - cacheRead - cacheWrite),
             cacheRead,
             cacheWrite,
-            output: countAt(info, 'last_token_usage', 'output_tokens'),
+            output: countAt(usage, 'output_tokens'),
         })
         through = later(through, recordTime(record))
     }

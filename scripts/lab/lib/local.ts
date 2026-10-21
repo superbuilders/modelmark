@@ -79,10 +79,13 @@ async function runScenario(
     }
 
     const trailers = await workspace.trailers()
+    const costs = await workspace.costs()
     const hookMs = await workspace.hookTimes()
     const reason = verdict({
         expected: scenario.expected,
         trailers,
+        costed: scenario.expected.length > 0 && scenario.priced !== false,
+        costs,
         hookMs,
         hookErrors: await workspace.hookErrors(),
     })
@@ -92,6 +95,7 @@ async function runScenario(
         status: reason ? 'failed' : 'passed',
         ...(reason ? { reason } : {}),
         trailers: trailers ?? [],
+        costs,
         hookMs,
         seconds: secondsSince(started),
     }

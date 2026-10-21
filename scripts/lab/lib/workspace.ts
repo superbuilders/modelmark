@@ -185,6 +185,22 @@ export class Workspace implements ScenarioWorkspace {
     }
 
     /**
+     * The newest commit's Assisted-cost values.
+     * @returns the values, in order
+     */
+    async costs(): Promise<string[]> {
+        const result = await spawn(
+            ['git', 'log', '-1', '--format=%(trailers:key=Assisted-cost,valueonly)'],
+            { cwd: this.repo },
+        )
+
+        return result.stdout
+            .split('\n')
+            .map(value => value.trim())
+            .filter(Boolean)
+    }
+
+    /**
      * How long each hook run took.
      * @returns milliseconds, one per run
      */
