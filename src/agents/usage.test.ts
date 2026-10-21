@@ -6,6 +6,11 @@ import { describe, expect, test } from 'vitest'
 
 import { readSessionUse } from './usage'
 
+/** The repository every reply below was made in. */
+const REPO = mkdtempSync(join(tmpdir(), 'modelmark-usage-repo-'))
+
+mkdirSync(join(REPO, '.git'))
+
 /**
  * Write JSONL records to a file, creating its folders.
  * @param path - the file
@@ -51,6 +56,7 @@ function claudeReply(time: string, id: string, usage: object): object {
     return {
         type: 'assistant',
         timestamp: new Date(at(time)).toISOString(),
+        cwd: REPO,
         requestId: `req_${id}`,
         message: { id, model: 'claude-opus-5-5', usage },
     }
@@ -80,7 +86,7 @@ function codexTurn(time: string, model: string): object {
     return {
         timestamp: new Date(at(time)).toISOString(),
         type: 'turn_context',
-        payload: { model },
+        payload: { model, cwd: REPO },
     }
 }
 
@@ -116,7 +122,7 @@ describe('Claude Code', () => {
     }
 
     test('counts each reply once across the main and subagent logs', () => {
-        const use = readSessionUse('claude-code', session(), undefined)
+        const use = readSessionUse('claude-code', session(), undefined, REPO)
 
         expect(use?.through).toBe(at('11:00'))
         expect(use?.uses).toHaveLength(3)
@@ -130,7 +136,7 @@ describe('Claude Code', () => {
     })
 
     test('counts only replies after the point', () => {
-        const use = readSessionUse('claude-code', session(), at('10:15'))
+        const use = readSessionUse('claude-code', session(), at('10:15'), REPO)
 
         expect(use?.uses.map(({ output }) => output).toSorted()).toEqual([2, 7])
     })
@@ -145,12 +151,12 @@ describe('Claude Code', () => {
 
         const env = { CLAUDE_CODE_SESSION_ID: 's1', CLAUDE_CONFIG_DIR: config }
 
-        expect(readSessionUse('claude-code', env, undefined)?.uses).toHaveLength(1)
-        expect(readSessionUse('claude-code', env, at('09:00'))?.uses).toEqual([])
+        expect(readSessionUse('claude-code', env, undefined, REPO)?.uses).toHaveLength(1)
+        expect(readSessionUse('claude-code', env, at('09:00'), REPO)?.uses).toEqual([])
     })
 
     test('a missing session gives nothing', () => {
-        expect(readSessionUse('claude-code', {}, undefined)).toBeUndefined()
+        expect(readSessionUse('claude-code', {}, undefined, REPO)).toBeUndefined()
     })
 })
 
@@ -189,7 +195,7 @@ describe('Codex', () => {
     }
 
     test('takes cached and written input out of input', () => {
-        const use = readSessionUse('codex', thread(), undefined)
+        const use = readSessionUse('codex', thread(), undefined, REPO)
 
         expect(use?.uses).toEqual([
             { model: 'gpt-5.6-terra', input: 100, cacheRead: 0, cacheWrite: 0, output: 10 },
@@ -200,7 +206,7 @@ describe('Codex', () => {
     })
 
     test('counts only replies after the point', () => {
-        const use = readSessionUse('codex', thread(), at('10:01'))
+        const use = readSessionUse('codex', thread(), at('10:01'), REPO)
 
         expect(use?.uses).toEqual([
             { model: 'gpt-6.1-sol', input: 9, cacheRead: 0, cacheWrite: 0, output: 1 },
@@ -208,7 +214,7 @@ describe('Codex', () => {
     })
 
     test('a reply after the point takes the model of the turn before the point', () => {
-        const use = readSessionUse('codex', thread(), at('09:30'))
+        const use = readSessionUse('codex', thread(), at('09:30'), REPO)
 
         expect(use?.uses.map(({ model }) => model)).toEqual(['gpt-5.6-terra', 'gpt-6.1-sol'])
     })
@@ -217,6 +223,7 @@ describe('Codex', () => {
 describe('Pi', () => {
     test('reads each reply after the point', () => {
         const file = writeLog(join(scratch(), '2026-10-20_p1.jsonl'), [
+            { type: 'session', cwd: REPO },
             {
                 type: 'message',
                 timestamp: new Date(at('09:00')).toISOString(),
@@ -238,7 +245,7 @@ describe('Pi', () => {
             },
         ])
 
-        expect(readSessionUse('pi', { PI_SESSION_FILE: file }, at('09:00'))).toEqual({
+        expect(readSessionUse('pi', { PI_SESSION_FILE: file }, at('09:00'), REPO)).toEqual({
             through: at('10:00'),
             uses: [
                 {

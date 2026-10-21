@@ -84,10 +84,10 @@ export async function costMessage(
     refresh: () => void = () => refreshPricesIfDue(env),
 ): Promise<string | null> {
     const { agent } = detection
-    const attempt = await commitAttempt(messageFile, markTrailer(detection))
-    const use = await usesSinceLastCommit(agent, env, attempt?.root)
+    const attempt = await commitAttempt(markTrailer(detection))
+    const use = attempt && (await usesSinceLastCommit(agent, env, attempt.root))
 
-    if (!use) {
+    if (!attempt || !use) {
         return null
     }
 

@@ -15,13 +15,11 @@ import type { AgentId, LoggedUse, ReplyPlace } from './types'
 /**
  * Whether a record was written at or before a point in time, so it and every
  * record before it were already counted.
- * @param record - a parsed log record
+ * @param time - when the record was written, if its log says
  * @param since - the point (ms since the epoch), or undefined to count everything
  * @returns true when the record is not after the point
  */
-function notAfter(record: unknown, since: number | undefined): boolean {
-    const time = recordTime(record)
-
+function notAfter(time: number | undefined, since: number | undefined): boolean {
     return since !== undefined && time !== undefined && time <= since
 }
 
@@ -29,13 +27,11 @@ function notAfter(record: unknown, since: number | undefined): boolean {
  * Whether a record is known to come after a point in time. A record with no
  * time can't be placed, so once a commit has been counted it is left out
  * rather than charged again.
- * @param record - a parsed log record
+ * @param time - when the record was written, if its log says
  * @param since - the point (ms since the epoch), or undefined to count everything
  * @returns true when the record counts
  */
-function isNew(record: unknown, since: number | undefined): boolean {
-    const time = recordTime(record)
-
+function isNew(time: number | undefined, since: number | undefined): boolean {
     return since === undefined || (time !== undefined && time > since)
 }
 
@@ -59,23 +55,15 @@ function later(a: number | undefined, b: number | undefined): number | undefined
  * otherwise its working folder does. A reply that only ran `bun test` in its
  * folder belongs to that folder's repository, and one that ran
  * `cd /other/repo && git commit` belongs to the other one.
- * @param root - the committing repository's root, or undefined to count every reply
- * @param env - the environment, for the home folder
+ * @param root - the committing repository's working folder
  * @returns a test for each reply
  */
-function workedIn(root: string | undefined, env: Env): (place: ReplyPlace) => boolean {
-    if (root === undefined) {
-        return () => true
-    }
-
+function workedIn(root: string): (place: ReplyPlace) => boolean {
     const repositoryOf = repositoryFinder()
-    const home = env.HOME ?? homedir()
     const target = repositoryOf(root)
 
-    return ({ cwd, tools }) => {
-        const named = new Set(
-            tools.flatMap(text => absolutePaths(text, home).map(path => repositoryOf(path))),
-        )
+    return ({ cwd, paths }) => {
+        const named = new Set(paths.map(path => repositoryOf(path)))
 
         named.delete(undefined)
 
@@ -88,17 +76,23 @@ function workedIn(root: string | undefined, env: Env): (place: ReplyPlace) => bo
 }
 
 /**
- * The tool calls in a reply's content, each as text to look for paths in.
+ * The absolute paths a reply's tool calls name.
  * @param content - the reply's content blocks
  * @param type - the block type a tool call has
  * @param field - the block field holding the call's arguments
- * @returns each call's arguments as JSON
+ * @param env - the environment, for the home folder
+ * @returns the paths
  */
-function toolCalls(content: unknown, type: string, field: string): string[] {
+function toolPaths(content: unknown, type: string, field: string, env: Env): string[] {
     return Array.isArray(content)
         ? content
               .filter(block => stringAt(block, 'type') === type)
-              .map(block => JSON.stringify(valueAt(block, field) ?? null))
+              .flatMap(block =>
+                  absolutePaths(
+                      JSON.stringify(valueAt(block, field) ?? null),
+                      env.HOME ?? homedir(),
+                  ),
+              )
         : []
 }
 
@@ -127,7 +121,7 @@ function claudeCodeUse(
 
     /*
      * A reply's records share its usage but each holds one content block, so
-     * its tool calls are gathered from all of them.
+     * the paths its tool calls name are gathered from all of them.
      */
     const replies = new Map<string, { use: TokenUse; time: number | undefined } & ReplyPlace>()
 
@@ -141,11 +135,13 @@ function claudeCodeUse(
         }
 
         for (const record of recordsFromEnd(log, USAGE_KEYS)) {
-            if (notAfter(record, since)) {
+            const time = recordTime(record)
+
+            if (notAfter(time, since)) {
                 break
             }
 
-            if (!isNew(record, since)) {
+            if (!isNew(time, since)) {
                 continue
             }
 
@@ -163,11 +159,11 @@ function claudeCodeUse(
             const key = id
                 ? `${id}:${stringAt(record, 'requestId') ?? ''}`
                 : `${log}#${replies.size}`
-            const tools = toolCalls(valueAt(record, 'message', 'content'), 'tool_use', 'input')
+            const paths = toolPaths(valueAt(record, 'message', 'content'), 'tool_use', 'input', env)
             const reply = replies.get(key)
 
             if (reply) {
-                reply.tools.push(...tools)
+                reply.paths.push(...paths)
 
                 continue
             }
@@ -182,9 +178,9 @@ function claudeCodeUse(
                     cacheWrite: countAt(usage, 'cache_creation_input_tokens'),
                     output: countAt(usage, 'output_tokens'),
                 },
-                time: recordTime(record),
+                time,
                 cwd: stringAt(record, 'cwd'),
-                tools,
+                paths,
             })
         }
     }
@@ -236,11 +232,11 @@ function codexUse(
         if (type === 'turn_context') {
             records.push(record)
 
-            if (notAfter(record, since)) {
+            if (notAfter(recordTime(record), since)) {
                 break
             }
         } else if (
-            isNew(record, since) &&
+            isNew(recordTime(record), since) &&
             (type === 'token_usage_record' ||
                 (type === 'response_item' &&
                     CODEX_TOOL_CALLS.includes(`"${stringAt(record, 'payload', 'type') ?? ''}"`)))
@@ -252,7 +248,7 @@ function codexUse(
     const uses: TokenUse[] = []
     let model: string | undefined
     let cwd: string | undefined
-    let tools: string[] = []
+    let paths: string[] = []
     let workdir: string | undefined
     let through: number | undefined
 
@@ -283,14 +279,14 @@ function codexUse(
                 workdir = folder
             }
 
-            tools.push(call.replaceAll(CODEX_WORKDIR, ''))
+            paths.push(...absolutePaths(call.replaceAll(CODEX_WORKDIR, ''), env.HOME ?? homedir()))
 
             continue
         }
 
-        const place = { cwd: workdir ?? cwd, tools }
+        const place = { cwd: workdir ?? cwd, paths }
 
-        tools = []
+        paths = []
         workdir = undefined
 
         if (!counts(place)) {
@@ -341,11 +337,13 @@ function piUse(
     let through: number | undefined
 
     for (const record of recordsFromEnd(log, USAGE_KEYS)) {
-        if (notAfter(record, since)) {
+        const time = recordTime(record)
+
+        if (notAfter(time, since)) {
             break
         }
 
-        if (!isNew(record, since)) {
+        if (!isNew(time, since)) {
             continue
         }
 
@@ -357,7 +355,12 @@ function piUse(
             !model ||
             !counts({
                 cwd,
-                tools: toolCalls(valueAt(record, 'message', 'content'), 'toolCall', 'arguments'),
+                paths: toolPaths(
+                    valueAt(record, 'message', 'content'),
+                    'toolCall',
+                    'arguments',
+                    env,
+                ),
             })
         ) {
             continue
@@ -372,7 +375,7 @@ function piUse(
             cacheWrite: countAt(usage, 'cacheWrite'),
             output: countAt(usage, 'output'),
         })
-        through = later(through, recordTime(record))
+        through = later(through, time)
     }
 
     return { uses, through }
@@ -396,17 +399,17 @@ const READERS: Readonly<
  * @param agent - which agent
  * @param env - the environment
  * @param since - count only replies after this (ms since the epoch), or the whole session when undefined
- * @param root - count only replies that worked in this repository, or every reply when undefined
+ * @param root - count only replies that worked in this repository
  * @returns the session's replies, or undefined when its logs can't be found or read
  */
 export function readSessionUse(
     agent: AgentId,
     env: Env,
     since: number | undefined,
-    root?: string,
+    root: string,
 ): LoggedUse | undefined {
     try {
-        return READERS[agent](env, since, workedIn(root, env))
+        return READERS[agent](env, since, workedIn(root))
     } catch {
         return undefined
     }

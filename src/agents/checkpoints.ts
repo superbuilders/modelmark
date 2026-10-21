@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto'
-import { dirname } from 'node:path'
 
 import { runCommand } from '../system/command'
 import { readState, writeState } from '../system/state'
@@ -15,15 +14,22 @@ import type { AgentId, Checkpoint, CommitAttempt, SessionUse } from './types'
  * in one never skips work done for another.
  * @param agent - which agent
  * @param session - its session
- * @param root - the repository's working folder, or undefined for the whole session
+ * @param root - the repository's working folder
  * @returns the state file's name
  */
-function checkpointName(agent: AgentId, session: string, root: string | undefined): string {
-    const name = `checkpoints/${agent}-${encodeURIComponent(session)}`
+function checkpointName(agent: AgentId, session: string, root: string): string {
+    return `${sessionCheckpointName(agent, session)}-${createHash('sha256').update(root).digest('hex').slice(0, 16)}`
+}
 
-    return root === undefined
-        ? name
-        : `${name}-${createHash('sha256').update(root).digest('hex').slice(0, 16)}`
+/**
+ * The name an older modelmark kept a session's one checkpoint under, for
+ * every repository at once.
+ * @param agent - which agent
+ * @param session - its session
+ * @returns the state file's name
+ */
+function sessionCheckpointName(agent: AgentId, session: string): string {
+    return `checkpoints/${agent}-${encodeURIComponent(session)}`
 }
 
 /**
@@ -75,21 +81,21 @@ async function committed(attempt: CommitAttempt): Promise<boolean> {
  * modelmark kept for the whole session starts from that count.
  * @param agent - which agent
  * @param session - its session
- * @param root - the repository's working folder, or undefined for the whole session
+ * @param root - the repository's working folder
  * @param env - the environment
  * @returns the time (ms since the epoch), or undefined to count the whole session
  */
 async function countedThrough(
     agent: AgentId,
     session: string,
-    root: string | undefined,
+    root: string,
     env: Env,
 ): Promise<number | undefined> {
     const name = checkpointName(agent, session, root)
     const checkpoint = readCheckpoint(name, env)
     const { through, pending } =
         checkpoint.through === undefined && !checkpoint.pending
-            ? readCheckpoint(checkpointName(agent, session, undefined), env)
+            ? readCheckpoint(sessionCheckpointName(agent, session), env)
             : checkpoint
 
     if (!pending) {
@@ -109,13 +115,13 @@ async function countedThrough(
  * session started.
  * @param agent - which agent
  * @param env - the environment
- * @param root - the repository's working folder, or undefined to count the whole session
+ * @param root - the repository's working folder
  * @returns the replies, or undefined when the session's logs can't be read
  */
 export async function usesSinceLastCommit(
     agent: AgentId,
     env: Env,
-    root: string | undefined,
+    root: string,
 ): Promise<SessionUse | undefined> {
     const session = sessionName(agent, env)
 
@@ -129,55 +135,41 @@ export async function usesSinceLastCommit(
 }
 
 /**
- * The commit a hook run is pricing, as its repository stands before it is made.
- * @param messageFile - the message file git passes, inside the repository's git folder
+ * The commit a hook run is pricing, as its repository stands before it is
+ * made. Git runs the hook at the top of the working folder.
  * @param mark - the mark the commit carries
+ * @param cwd - the folder the hook runs in
  * @returns the attempt, or undefined outside a repository's working folder
  */
 export async function commitAttempt(
-    messageFile: string,
     mark: string,
+    cwd = process.cwd(),
 ): Promise<CommitAttempt | undefined> {
-    const gitDir = await runCommand(['git', 'rev-parse', '--absolute-git-dir'], {
-        cwd: dirname(messageFile),
-    })
-
-    if (gitDir.exitCode !== 0) {
-        return undefined
-    }
-
-    const dir = gitDir.stdout.trim()
-    const head = await runCommand([
-        'git',
-        `--git-dir=${dir}`,
-        'rev-parse',
-        '-q',
-        '--verify',
-        'HEAD',
-    ])
-
     /*
-     * Git runs the hook at the top of the working folder.
+     * A repository with no commits has no HEAD: git prints the two folders,
+     * then exits with an error.
      */
-    const root = await runCommand(['git', 'rev-parse', '--show-toplevel'], { cwd: process.cwd() })
+    const result = await runCommand(
+        ['git', 'rev-parse', '--absolute-git-dir', '--show-toplevel', '--verify', '-q', 'HEAD'],
+        { cwd },
+    )
+    const [gitDir, root, head = ''] = result.stdout.split('\n')
 
-    return root.exitCode === 0
-        ? { gitDir: dir, head: head.stdout.trim(), mark, root: root.stdout.trim() }
-        : undefined
+    return gitDir && root ? { gitDir, root, head, mark } : undefined
 }
 
 /**
- * Mark a session's replies as counted, so the next commit starts after them.
- * With an attempt, they count only once that commit is made.
+ * Mark a session's replies as counted, so the next commit in the repository
+ * starts after them once that commit is made.
  * @param agent - which agent
  * @param use - the replies just counted
- * @param attempt - the commit they were charged to, or undefined to count them now
+ * @param attempt - the commit they were charged to
  * @param env - the environment
  */
 export function markCounted(
     agent: AgentId,
     use: SessionUse,
-    attempt: CommitAttempt | undefined,
+    attempt: CommitAttempt,
     env: Env,
 ): void {
     if (use.through === undefined) {
@@ -185,9 +177,10 @@ export function markCounted(
     }
 
     const name = checkpointName(agent, use.session, use.root)
-    const checkpoint: Checkpoint = attempt
-        ? { through: readCheckpoint(name, env).through, pending: { through: use.through, attempt } }
-        : { through: use.through }
+    const checkpoint: Checkpoint = {
+        through: readCheckpoint(name, env).through,
+        pending: { through: use.through, attempt },
+    }
 
     writeState(name, JSON.stringify(checkpoint), env)
 }

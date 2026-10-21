@@ -58,8 +58,6 @@ interface Commit {
 interface Scenario {
     /** What it shows. */
     name: string
-    /** True when the agent's own folder changes, which Pi's log can't record. */
-    moves?: boolean
     /** The replies and commits, in order. */
     steps: (Reply | Commit)[]
 }
@@ -75,7 +73,6 @@ const SCENARIOS: Scenario[] = [
     },
     {
         name: 'a session that moves to another repository pays there only for the work after the move',
-        moves: true,
         steps: [
             { in: 'A', calls: [{ shell: 'bun test' }] },
             { in: 'A' },
@@ -133,7 +130,6 @@ const SCENARIOS: Scenario[] = [
     },
     {
         name: 'commits back and forth each count only their own new replies',
-        moves: true,
         steps: [
             { in: 'A' },
             { commit: 'A', counts: [0] },
@@ -380,8 +376,19 @@ const HARNESSES: Record<AgentId, (replies: Reply[], world: World) => Record<stri
     },
 }
 
+/**
+ * Whether the agent's own folder changes during a scenario, which Pi's log
+ * @param scenario - the scenario
+ * @param scenario.steps - its replies and commits
+ * @param scenario - the scenario
+ * @returns true when its replies are made in more than one folder
+ */
+function moves({ steps }: Scenario): boolean {
+    return new Set(steps.flatMap(step => ('in' in step ? [step.in] : []))).size > 1
+}
+
 describe.each(Object.keys(HARNESSES) as AgentId[])('%s', agent => {
-    test.each(SCENARIOS.filter(scenario => agent !== 'pi' || !scenario.moves))(
+    test.each(SCENARIOS.filter(scenario => agent !== 'pi' || !moves(scenario)))(
         '$name',
         async ({ steps }) => {
             const world = makeWorld()
@@ -404,8 +411,17 @@ describe.each(Object.keys(HARNESSES) as AgentId[])('%s', agent => {
 
                 expect(counted, `the commit in ${step.commit}`).toEqual(step.counts)
 
+                /*
+                 * A commit in a repository that is gone counts as made, so
+                 * the next commit settles this one without a real git.
+                 */
                 if (use) {
-                    markCounted(agent, use, undefined, env)
+                    markCounted(
+                        agent,
+                        use,
+                        { gitDir: join(world.root, 'gone'), root: use.root, head: '', mark: '' },
+                        env,
+                    )
                 }
             }
         },

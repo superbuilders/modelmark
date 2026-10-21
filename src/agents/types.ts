@@ -73,8 +73,8 @@ export type TestedRecord = Partial<Record<Platform, Partial<Record<AgentId, Test
 export interface ReplyPlace {
     /** The folder the agent was in, when its log says. */
     cwd: string | undefined
-    /** The reply's tool calls, each as text that may name paths. */
-    tools: string[]
+    /** The absolute paths the reply's tool calls name. */
+    paths: string[]
 }
 
 /**
@@ -93,8 +93,8 @@ export interface LoggedUse {
 export interface SessionUse extends LoggedUse {
     /** The session, named the same across its commits. */
     session: string
-    /** The repository the replies were counted for, or undefined for the whole session. */
-    root: string | undefined
+    /** The repository the replies were counted for, its working folder. */
+    root: string
 }
 
 /**
