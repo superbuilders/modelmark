@@ -84,3 +84,25 @@ export interface SessionUse extends LoggedUse {
     /** The session, named the same across its commits. */
     session: string
 }
+
+/**
+ * A commit a hook run priced, as its repository stood before git made it.
+ */
+export interface CommitAttempt {
+    /** The repository's git folder, absolute. */
+    gitDir: string
+    /** The commit HEAD named then, or empty in a repository with no commits. */
+    head: string
+    /** The mark line the commit carries, to know it again. */
+    mark: string
+}
+
+/**
+ * How far a session's replies have been counted.
+ */
+export interface Checkpoint {
+    /** The newest reply counted by a commit that was made (ms since the epoch), or undefined for none. */
+    through?: number
+    /** The newest reply the latest commit counted, until that commit is known to be made. */
+    pending?: { through: number; attempt: CommitAttempt }
+}

@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { detect } from '../../agents/detect'
 import { costMessage, hookCommand, markMessage } from './hook'
 
-import type { Detection } from '../../agents/types'
+import type { Detection, FoundAgent, ModelUse } from '../../agents/types'
 import type { PriceList } from '../../pricing/types'
 
 vi.mock(import('node:child_process'), async importOriginal => ({
@@ -30,7 +30,7 @@ afterEach(() => {
     vi.unstubAllEnvs()
 })
 
-const OPUS: Detection = {
+const OPUS: FoundAgent & ModelUse = {
     agent: 'claude-code',
     model: 'claude-opus-5-5',
     effort: 'medium',
@@ -160,15 +160,49 @@ describe('costMessage', () => {
         const second = messageFile('Two\n')
 
         reply(100_000)
-        expect(await costMessage(first, 'claude-code', env, PRICES, refresh)).toBe(
-            'Assisted-cost: $2.00',
-        )
+        expect(await costMessage(first, OPUS, env, PRICES, refresh)).toBe('Assisted-cost: $2.00')
 
         reply(50_000)
-        await costMessage(second, 'claude-code', env, PRICES, refresh)
+        await costMessage(second, OPUS, env, PRICES, refresh)
 
         expect(readFileSync(first, 'utf8')).toBe('One\n\nAssisted-cost: $2.00\n')
         expect(readFileSync(second, 'utf8')).toBe('Two\n\nAssisted-cost: $1.00\n')
+    })
+
+    test('a commit git drops leaves its replies to the next try', async () => {
+        const { env, reply } = session()
+        const repo = mkdtempSync(join(tmpdir(), 'modelmark-repo-'))
+        const message = join(repo, '.git', 'COMMIT_EDITMSG')
+        const mark = 'Assisted-by: claude-code:claude-opus-5-5@medium'
+
+        /**
+         * Run git in the scratch repository.
+         * @param args - git's arguments
+         */
+        function git(...args: string[]): void {
+            execFileSync('git', ['-c', 'user.name=T', '-c', 'user.email=t@t', ...args], {
+                cwd: repo,
+                stdio: 'ignore',
+            })
+        }
+
+        git('init', '-q')
+        git('commit', '-q', '--allow-empty', '-m', 'Start')
+
+        reply(100_000)
+        writeFileSync(message, `One\n\n${mark}\n`)
+        await costMessage(message, OPUS, env, PRICES, refresh)
+
+        reply(50_000)
+        writeFileSync(message, `One\n\n${mark}\n`)
+        await costMessage(message, OPUS, env, PRICES, refresh)
+        expect(readFileSync(message, 'utf8')).toBe(`One\n\n${mark}\nAssisted-cost: $3.00\n`)
+
+        git('commit', '-q', '--allow-empty', '-F', message)
+        reply(10_000)
+        writeFileSync(message, `Two\n\n${mark}\n`)
+        await costMessage(message, OPUS, env, PRICES, refresh)
+        expect(readFileSync(message, 'utf8')).toBe(`Two\n\n${mark}\nAssisted-cost: $0.20\n`)
     })
 
     test('an amend adds its new replies to the cost already there', async () => {
@@ -176,7 +210,7 @@ describe('costMessage', () => {
         const path = messageFile('One\n\nAssisted-cost: $2.00\n')
 
         reply(50_000)
-        await costMessage(path, 'claude-code', env, PRICES, refresh)
+        await costMessage(path, OPUS, env, PRICES, refresh)
 
         expect(readFileSync(path, 'utf8')).toBe('One\n\nAssisted-cost: $3.00\n')
     })
@@ -186,9 +220,7 @@ describe('costMessage', () => {
         const path = messageFile('One\n')
 
         reply(100)
-        expect(await costMessage(path, 'claude-code', env, PRICES, refresh)).toBe(
-            'Assisted-cost: $0.0020',
-        )
+        expect(await costMessage(path, OPUS, env, PRICES, refresh)).toBe('Assisted-cost: $0.0020')
     })
 
     test('an amend with no new replies keeps its cost', async () => {
@@ -196,8 +228,8 @@ describe('costMessage', () => {
         const path = messageFile('One\n')
 
         reply(50_000)
-        await costMessage(path, 'claude-code', env, PRICES, refresh)
-        expect(await costMessage(path, 'claude-code', env, PRICES, refresh)).toBeNull()
+        await costMessage(path, OPUS, env, PRICES, refresh)
+        expect(await costMessage(path, OPUS, env, PRICES, refresh)).toBeNull()
         expect(readFileSync(path, 'utf8')).toBe('One\n\nAssisted-cost: $1.00\n')
     })
 
@@ -206,9 +238,9 @@ describe('costMessage', () => {
 
         vi.mocked(spawn).mockClear()
         reply(100)
-        await costMessage(messageFile('One\n'), 'claude-code', env, PRICES)
+        await costMessage(messageFile('One\n'), OPUS, env, PRICES)
         reply(100)
-        await costMessage(messageFile('Two\n'), 'claude-code', env, PRICES)
+        await costMessage(messageFile('Two\n'), OPUS, env, PRICES)
         expect(spawn).toHaveBeenCalledOnce()
         expect(vi.mocked(spawn).mock.calls[0]?.[1]).toContain('refresh-prices')
 
@@ -217,7 +249,7 @@ describe('costMessage', () => {
         offline.reply(100)
         await costMessage(
             messageFile('One\n'),
-            'claude-code',
+            OPUS,
             { ...offline.env, MODELMARK_OFFLINE: '1' },
             PRICES,
         )
@@ -229,8 +261,8 @@ describe('costMessage', () => {
         const path = messageFile('One\n')
 
         reply(100_000)
-        expect(await costMessage(path, 'claude-code', env, {}, refresh)).toBeNull()
-        expect(await costMessage(path, 'claude-code', env, PRICES, refresh)).toBeNull()
+        expect(await costMessage(path, OPUS, env, {}, refresh)).toBeNull()
+        expect(await costMessage(path, OPUS, env, PRICES, refresh)).toBeNull()
         expect(readFileSync(path, 'utf8')).toBe('One\n')
     })
 })

@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-import { markCounted, usesSinceLastCommit } from '../../agents/checkpoints'
+import { commitAttempt, markCounted, usesSinceLastCommit } from '../../agents/checkpoints'
 import { detect } from '../../agents/detect'
 import { usesCost } from '../../pricing/cost'
 import { claimPriceRefresh, loadPriceList } from '../../pricing/prices'
@@ -11,7 +11,7 @@ import { markTrailer } from '../../trailers/mark'
 import { messageCost, writeTrailer } from '../../trailers/message'
 import { SKIPPED_SOURCES } from './constants'
 
-import type { AgentId, Detection } from '../../agents/types'
+import type { Detection, FoundAgent, ModelUse } from '../../agents/types'
 import type { PriceList } from '../../pricing/types'
 import type { Env } from '../../system/types'
 
@@ -70,7 +70,7 @@ function refreshPricesIfDue(env: Env = process.env): void {
  * no later commit counts them again. Then the prices are refreshed in the
  * background when they are due.
  * @param messageFile - the message file git passes to prepare-commit-msg
- * @param agent - the agent making the commit
+ * @param detection - the agent making the commit, and its model
  * @param env - the environment (default: this process's)
  * @param prices - the price list (default: the shipped one, updated from the cache, read only when there are replies to price)
  * @param refresh - starts a price refresh if one is due
@@ -78,12 +78,13 @@ function refreshPricesIfDue(env: Env = process.env): void {
  */
 export async function costMessage(
     messageFile: string,
-    agent: AgentId,
+    detection: FoundAgent & ModelUse,
     env: Env = process.env,
     prices?: PriceList,
     refresh: () => void = () => refreshPricesIfDue(env),
 ): Promise<string | null> {
-    const use = usesSinceLastCommit(agent, env)
+    const { agent } = detection
+    const use = await usesSinceLastCommit(agent, env)
 
     if (!use) {
         return null
@@ -103,7 +104,7 @@ export async function costMessage(
         await writeTrailer(messageFile, trailer, 'replace')
     }
 
-    markCounted(agent, use, env)
+    markCounted(agent, use, await commitAttempt(messageFile, markTrailer(detection)), env)
     refresh()
 
     return trailer
@@ -140,7 +141,7 @@ export async function hookCommand(messageFile: string, source?: string): Promise
     }
 
     try {
-        await costMessage(messageFile, detection.agent)
+        await costMessage(messageFile, detection)
     } catch (error) {
         console.error(`modelmark: commit left without a cost (${String(error)})`)
     }
