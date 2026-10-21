@@ -128,7 +128,7 @@ const OUTCOME_TEXT: Readonly<Record<InstallResult['outcome'], string>> = {
 
 /** What `install` says about the one thing modelmark does on the network. */
 const PRICES_NOTICE =
-    'Commits get an estimated cost, priced from a list modelmark downloads from models.dev at most once an hour in the background; set MODELMARK_OFFLINE=1 to turn the download off'
+    'Prices are fetched hourly from models.dev; MODELMARK_OFFLINE=1 turns this off'
 
 /**
  * `modelmark install`: add the hook, say where it went, and, the first time,
