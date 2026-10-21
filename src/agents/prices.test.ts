@@ -4,6 +4,8 @@ import { join } from 'node:path'
 
 import { describe, expect, test } from 'vitest'
 
+import { writeState } from '../system/state'
+import { PRICE_REFRESH_STATE } from './constants'
 import { loadPriceList, priceList, priceRefreshDue } from './prices'
 
 test('keeps first-party prices by model id, with context tiers', () => {
@@ -52,13 +54,17 @@ describe('loadPriceList', () => {
         mkdirSync(join(cache, 'modelmark'))
         writeFileSync(
             join(cache, 'modelmark', 'prices.json'),
-            JSON.stringify({ 'brand-new-1': { input: 1, output: 2 } }),
+            JSON.stringify({
+                'brand-new-1': { input: 1, output: 2 },
+                'claude-opus-5-5': { input: 3, output: 9 },
+            }),
         )
 
         const prices = loadPriceList({ XDG_CACHE_HOME: cache })
 
         expect(prices['brand-new-1']).toEqual({ input: 1, output: 2 })
-        expect(prices['claude-opus-5-5']).toBeDefined()
+        expect(prices['claude-opus-5-5']).toEqual({ input: 3, output: 9 })
+        expect(prices['gpt-5.6-terra']).toBeDefined()
     })
 })
 
@@ -71,14 +77,13 @@ describe('priceRefreshDue', () => {
      * @returns the environment
      */
     function refreshedAgo(ago?: number): Record<string, string> {
-        const state = mkdtempSync(join(tmpdir(), 'modelmark-prices-'))
+        const env = { XDG_STATE_HOME: mkdtempSync(join(tmpdir(), 'modelmark-prices-')) }
 
         if (ago !== undefined) {
-            mkdirSync(join(state, 'modelmark'))
-            writeFileSync(join(state, 'modelmark', 'prices-refreshed'), String(now - ago))
+            writeState(PRICE_REFRESH_STATE, String(now - ago), env)
         }
 
-        return { XDG_STATE_HOME: state }
+        return env
     }
 
     test('a day after the last refresh, or never refreshed', () => {

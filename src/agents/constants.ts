@@ -84,7 +84,7 @@ export const FIRST_PARTY_PROVIDERS = [
     'meta',
 ] as const
 
-/** Set to anything to keep modelmark off the network: the prices it shipped with are used. */
+/** Set to anything to turn off price downloads; prices already downloaded still apply. */
 export const OFFLINE_VARIABLE = 'MODELMARK_OFFLINE'
 
 /** How old the last price refresh may be before a commit starts another. */

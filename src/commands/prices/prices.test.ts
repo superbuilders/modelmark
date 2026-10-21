@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -29,7 +29,13 @@ test("writes models.dev's first-party prices to the cache folder", async () => {
 })
 
 test('leaves the cached copy alone when models.dev fails', async () => {
+    const cache = mkdtempSync(join(tmpdir(), 'modelmark-refresh-'))
+    const cached = join(cache, 'modelmark', 'prices.json')
+
+    mkdirSync(join(cache, 'modelmark'))
+    writeFileSync(cached, '{"kept-1":{"input":1,"output":1}}\n')
     vi.stubGlobal('fetch', async () => new Response('', { status: 503 }))
 
-    await expect(refreshPricesCommand({ XDG_CACHE_HOME: tmpdir() })).rejects.toThrow(/503/)
+    await expect(refreshPricesCommand({ XDG_CACHE_HOME: cache })).rejects.toThrow(/503/)
+    expect(readFileSync(cached, 'utf8')).toBe('{"kept-1":{"input":1,"output":1}}\n')
 })

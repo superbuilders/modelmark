@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -8,6 +9,11 @@ import { detect } from '../../agents/mark'
 import { costMessage, hookCommand, markMessage } from './hook'
 
 import type { Detection, PriceList } from '../../agents/types'
+
+vi.mock(import('node:child_process'), async importOriginal => ({
+    ...(await importOriginal()),
+    spawn: vi.fn(() => ({ unref: vi.fn() })) as unknown as typeof spawn,
+}))
 
 vi.mock(import('../../agents/mark'), async importOriginal => ({
     ...(await importOriginal()),
@@ -188,6 +194,29 @@ describe('costMessage', () => {
         await costMessage(path, 'claude-code', env, PRICES, refresh)
         expect(await costMessage(path, 'claude-code', env, PRICES, refresh)).toBeNull()
         expect(readFileSync(path, 'utf8')).toBe('One\n\nAssisted-cost: $1.00\n')
+    })
+
+    test('starts one background price refresh when due, and none offline', async () => {
+        const { env, reply } = session()
+
+        vi.mocked(spawn).mockClear()
+        reply(100)
+        await costMessage(messageFile('One\n'), 'claude-code', env, PRICES)
+        reply(100)
+        await costMessage(messageFile('Two\n'), 'claude-code', env, PRICES)
+        expect(spawn).toHaveBeenCalledOnce()
+        expect(vi.mocked(spawn).mock.calls[0]?.[1]).toContain('refresh-prices')
+
+        const offline = session()
+
+        offline.reply(100)
+        await costMessage(
+            messageFile('One\n'),
+            'claude-code',
+            { ...offline.env, MODELMARK_OFFLINE: '1' },
+            PRICES,
+        )
+        expect(spawn).toHaveBeenCalledOnce()
     })
 
     test('replies without a price get no cost, and still count as used', async () => {

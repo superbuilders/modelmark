@@ -62,8 +62,5 @@ export function readState(name: string, env: Env): string | undefined {
  * @param env - the environment
  */
 export function writeState(name: string, value: string, env: Env): void {
-    const path = join(stateDir(env), name)
-
-    mkdirSync(dirname(path), { recursive: true })
-    writeFileSync(path, value)
+    writeWhole(join(stateDir(env), name), value)
 }

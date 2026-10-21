@@ -147,9 +147,8 @@ Each reply is priced on its own from models.dev's first-party prices
 (`agents/prices.ts`); a context tier prices the whole reply. The package ships
 `prices.json` (`scripts/prices` refreshes it), and the hook lays the copy in
 `$XDG_CACHE_HOME/modelmark/prices.json` over it. After costing, the hook
-starts the hidden `refresh-prices` command detached when the last refresh is a
-day old (an hour when a model had no price), unless `MODELMARK_OFFLINE` is
-set; the commit never waits on the network. A model without a price makes the commit's cost unknown, never
+may start the hidden `refresh-prices` command detached (README, "Fresh
+prices"); the commit never waits on the network. A model without a price makes the commit's cost unknown, never
 $0. After each commit the hook saves the newest counted reply's time under
 `$XDG_STATE_HOME/modelmark/checkpoints/`, and the next commit counts only
 replies after it. An amend adds to the cost already in the message.

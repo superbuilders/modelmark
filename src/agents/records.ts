@@ -4,7 +4,7 @@
  * @param keys - the path of object keys to follow
  * @returns the value there, or undefined when any step is missing or not an object
  */
-function valueAt(record: unknown, ...keys: string[]): unknown {
+export function valueAt(record: unknown, ...keys: string[]): unknown {
     let value = record
 
     for (const key of keys) {

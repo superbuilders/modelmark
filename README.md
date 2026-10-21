@@ -146,13 +146,14 @@ subscription or a negotiated rate costs something else.
   and writes, so counting output alone would miss most of it. A model whose
   price rises past a context size is charged the higher rate for the whole
   reply.
-- **Prices:** from [models.dev](https://models.dev). modelmark ships a copy,
-  and once a day a commit downloads a fresh one in the background into
-  `~/.cache/modelmark/prices.json`, so new models get priced without an
-  upgrade. A commit using a model with no price tries again after an hour.
-  The commit never waits for the download, and a failed one changes nothing.
-  Set `MODELMARK_OFFLINE=1` to stay off the network and use the shipped copy. A gateway's prefix (`anthropic-primary/claude-opus-5-5`)
-  is ignored. When a model has no price, the commit gets no cost rather than a
+- **Prices:** from [models.dev](https://models.dev). A gateway's prefix
+  (`anthropic-primary/claude-opus-5-5`) is ignored.
+- **Fresh prices:** modelmark ships a copy of the prices and keeps a newer one
+  in `~/.cache/modelmark/prices.json`, so new models get priced without an
+  upgrade. A commit starts a download in the background when the last try was
+  over a day ago, or over an hour ago if a model had no price. The commit
+  never waits for it, and a failed download keeps the prices you have. Set
+  `MODELMARK_OFFLINE=1` to turn the downloads off. When a model has no price, the commit gets no cost rather than a
   wrong one.
 - **An amend** adds its new replies to the cost already there. `summary`
   splits a commit with two marks evenly between them.

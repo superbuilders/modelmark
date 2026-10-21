@@ -5,7 +5,7 @@ import { AGENT_TIMEOUT_MS, COMMIT_MESSAGE } from './constants'
 import { labEnv, shellQuote, spawn, tail } from './process'
 
 import type { Env } from '../../../src/system/types'
-import type { ScenarioWorkspace } from './types'
+import type { CommitTrailers, ScenarioWorkspace } from './types'
 
 /** How often a detached command's exit is checked for. */
 const POLL_MS = 100
@@ -179,7 +179,7 @@ export class Workspace implements ScenarioWorkspace {
      * The Assisted-by and Assisted-cost values on the newest commit.
      * @returns them, in order, or null when no lab commit was made
      */
-    async trailers(): Promise<{ marks: string[]; costs: string[] } | null> {
+    async trailers(): Promise<CommitTrailers | null> {
         const result = await spawn(
             [
                 'git',

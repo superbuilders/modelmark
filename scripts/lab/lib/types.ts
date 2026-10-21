@@ -61,6 +61,16 @@ export interface ScenarioWorkspace {
 }
 
 /**
+ * The trailers on a lab commit.
+ */
+export interface CommitTrailers {
+    /** Its Assisted-by values, in order. */
+    marks: string[]
+    /** Its Assisted-cost values, in order. */
+    costs: string[]
+}
+
+/**
  * The outcome of one scenario on one host.
  */
 export interface ScenarioResult {

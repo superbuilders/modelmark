@@ -34,8 +34,8 @@ export function* recordsFromEnd(
 ): Generator<unknown> {
     const fd = openSync(path, 'r')
     /*
-     * One buffer serves every read, and only a block holding wanted text is
-     * copied and decoded.
+     * One buffer serves every read, instead of a new one per chunk; an
+     * unfinished line is copied out before the next read overwrites it.
      */
     const buffer = Buffer.allocUnsafe(chunkBytes)
 

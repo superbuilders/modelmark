@@ -79,7 +79,7 @@ function refreshPricesIfDue(unpriced: boolean, env: Env = process.env): void {
  * @param messageFile - the message file git passes to prepare-commit-msg
  * @param agent - the agent making the commit
  * @param env - the environment (default: this process's)
- * @param prices - the price list (default: the shipped one, updated from the cache)
+ * @param prices - the price list (default: the shipped one, updated from the cache, read only when there are replies to price)
  * @param refresh - starts a price refresh if one is due, told whether a model lacked a price
  * @returns the trailer written, or null when the commit gets none
  */
@@ -87,7 +87,7 @@ export async function costMessage(
     messageFile: string,
     agent: AgentId,
     env: Env = process.env,
-    prices: PriceList = loadPriceList(env),
+    prices?: PriceList,
     refresh: (unpriced: boolean) => void = unpriced => refreshPricesIfDue(unpriced, env),
 ): Promise<string | null> {
     const use = usesSinceLastCommit(agent, env)
@@ -96,7 +96,7 @@ export async function costMessage(
         return null
     }
 
-    const usd = usesCost(use.uses, prices)
+    const usd = use.uses.length > 0 ? usesCost(use.uses, prices ?? loadPriceList(env)) : 0
     let trailer: string | null = null
 
     /*
@@ -119,7 +119,7 @@ export async function costMessage(
     }
 
     markCounted(agent, use, env)
-    refresh(use.uses.length > 0 && usd === null)
+    refresh(usd === null)
 
     return trailer
 }
