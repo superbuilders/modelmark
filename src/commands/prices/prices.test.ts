@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -6,6 +5,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
 import { CATALOG_URL } from '../../agents/constants'
+import { git } from '../../system/command'
 import { pricesCommand, refreshPricesCommand } from './prices'
 
 afterEach(() => {
@@ -101,10 +101,10 @@ describe('prices', () => {
         /**
          * Commit with a message.
          * @param message - the message
+         * @returns when it is made
          */
-        function commit(message: string): void {
-            execFileSync(
-                'git',
+        async function commit(message: string): Promise<void> {
+            await git(
                 [
                     '-c',
                     'user.name=t',
@@ -116,14 +116,14 @@ describe('prices', () => {
                     '-m',
                     message,
                 ],
-                { cwd: repo },
+                repo,
             )
         }
 
-        execFileSync('git', ['init', '-q'], { cwd: repo })
-        commit('One\n\nAssisted-by: codex:zz-tiered-1@high')
-        commit('Two\n\nAssisted-by: pi:gateway/zz-plain-1\nAssisted-by: jojo:mystery-9')
-        commit('Three\n\nAssisted-by: pi:unknown\nAssisted-by: pi:zz-plain-1')
+        await git(['init', '-q'], repo)
+        await commit('One\n\nAssisted-by: codex:zz-tiered-1@high')
+        await commit('Two\n\nAssisted-by: pi:gateway/zz-plain-1\nAssisted-by: jojo:mystery-9')
+        await commit('Three\n\nAssisted-by: pi:unknown\nAssisted-by: pi:zz-plain-1')
 
         const output = await printed(undefined, { format: 'table' }, cached(), repo)
 

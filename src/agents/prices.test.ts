@@ -8,7 +8,7 @@ import { writeState } from '../system/state'
 import { PRICE_REFRESH_STATE } from './constants'
 import { loadPriceList, priceList, priceRefreshDue } from './prices'
 
-test('keeps first-party prices by model id, with context tiers', () => {
+test('keeps first-party prices by model id, with context tiers smallest first', () => {
     const list = priceList({
         openrouter: {
             models: {
@@ -26,6 +26,7 @@ test('keeps first-party prices by model id, with context tiers', () => {
                         tiers: [
                             { input: 4, output: 15, tier: { type: 'context', size: 272_000 } },
                             { input: 1, output: 1, tier: { type: 'time' } },
+                            { input: 3, output: 12, tier: { type: 'context', size: 128_000 } },
                         ],
                     },
                 },
@@ -41,7 +42,10 @@ test('keeps first-party prices by model id, with context tiers', () => {
             input: 2,
             output: 10,
             cacheRead: 0.1,
-            tiers: [{ input: 4, output: 15, above: 272_000 }],
+            tiers: [
+                { input: 3, output: 12, above: 128_000 },
+                { input: 4, output: 15, above: 272_000 },
+            ],
         },
     })
     expect(Object.keys(list)).toEqual(['claude-opus-5-5', 'gpt-6.1-sol'])

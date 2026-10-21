@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 import { cachePath, readState } from '../system/state'
@@ -41,6 +41,19 @@ export function readPriceList(path: string): PriceList {
  */
 export function loadPriceList(env: Env): PriceList {
     return { ...readPriceList(SHIPPED_PRICES), ...readPriceList(cachePath(PRICES_FILE, env)) }
+}
+
+/**
+ * When a refresh last left prices in the cache folder.
+ * @param env - the environment
+ * @returns the time, or undefined when only the shipped list is in use
+ */
+export function priceListFetchedAt(env: Env): Date | undefined {
+    try {
+        return statSync(cachePath(PRICES_FILE, env)).mtime
+    } catch {
+        return undefined
+    }
 }
 
 /**
@@ -104,7 +117,8 @@ function rates(cost: CatalogCost): Rates | undefined {
 }
 
 /**
- * A catalog cost as a model price, keeping only tiers set by input size.
+ * A catalog cost as a model price, keeping only tiers set by input size,
+ * smallest first, the order costing walks them in.
  * @param cost - the catalog's cost
  * @returns the price, or undefined when the base rates are incomplete
  */
@@ -123,7 +137,7 @@ function modelPrice(cost: CatalogCost): ModelPrice | undefined {
             : []
     })
 
-    return tiers.length > 0 ? { ...base, tiers } : base
+    return tiers.length > 0 ? { ...base, tiers: tiers.toSorted((a, b) => a.above - b.above) } : base
 }
 
 /**

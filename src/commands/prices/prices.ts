@@ -1,10 +1,8 @@
-import { statSync } from 'node:fs'
-
 import { PRICES_FILE, UNKNOWN_MODEL } from '../../agents/constants'
 import { modelId, priceOf } from '../../agents/cost'
 import { parseMark } from '../../agents/mark'
 import { MARK_LINE } from '../../agents/patterns'
-import { fetchPriceList, loadPriceList } from '../../agents/prices'
+import { fetchPriceList, loadPriceList, priceListFetchedAt } from '../../agents/prices'
 import { runCommand } from '../../system/command'
 import { markdownTable } from '../../system/markdown'
 import { cachePath, writeWhole } from '../../system/state'
@@ -43,18 +41,12 @@ async function markedModels(cwd?: string): Promise<string[]> {
     return [...new Set(models)].filter(model => model && model !== UNKNOWN_MODEL).toSorted()
 }
 
-/**
- * When the cached prices were fetched.
- * @param env - the environment
- * @returns the time, or undefined when only the shipped list is in use
- */
-function fetchedAt(env: Env): Date | undefined {
-    try {
-        return statSync(cachePath(PRICES_FILE, env)).mtime
-    } catch {
-        return undefined
-    }
-}
+/** Prices with as many decimals as they need, from two up to four. */
+const RATE_FORMAT = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+    useGrouping: false,
+})
 
 /**
  * How long ago a time was, in words.
@@ -95,13 +87,7 @@ function sizeText(tokens: number): string {
  * @returns such as `0.375`, or the input-price marker
  */
 function rateText(rate: number | undefined): string {
-    return rate === undefined
-        ? INPUT_RATE
-        : rate.toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 4,
-              useGrouping: false,
-          })
+    return rate === undefined ? INPUT_RATE : RATE_FORMAT.format(rate)
 }
 
 /**
@@ -115,7 +101,7 @@ function priceRows(model: string, price: ModelPrice | undefined): string[][] {
         return [[model, '', NO_PRICE, '', '', '']]
     }
 
-    const tiers = (price.tiers ?? []).toSorted((a, b) => a.above - b.above)
+    const tiers = price.tiers ?? []
     const bands: [string, Rates][] = [
         [tiers[0] ? `<=${sizeText(tiers[0].above)}` : 'all', price],
         ...tiers.map((tier): [string, Rates] => [`>${sizeText(tier.above)}`, tier]),
@@ -236,7 +222,7 @@ export async function pricesCommand(
     if (json || format === 'json') {
         console.log(
             JSON.stringify({
-                fetched: fetchedAt(env)?.toISOString() ?? null,
+                fetched: priceListFetchedAt(env)?.toISOString() ?? null,
                 prices: Object.fromEntries(
                     models.map(model => [model, priceOf(model, prices) ?? null]),
                 ),
@@ -264,5 +250,5 @@ export async function pricesCommand(
         return
     }
 
-    console.log(pricesText(subject, rows, fetchedAt(env)))
+    console.log(pricesText(subject, rows, priceListFetchedAt(env)))
 }
