@@ -126,8 +126,13 @@ const OUTCOME_TEXT: Readonly<Record<InstallResult['outcome'], string>> = {
     unchanged: 'Already installed in',
 }
 
+/** What `install` says about the one thing modelmark does on the network. */
+const PRICES_NOTICE =
+    'Commits get an estimated cost, priced from a list modelmark downloads from models.dev at most once an hour in the background; set MODELMARK_OFFLINE=1 to turn the download off'
+
 /**
- * `modelmark install`: add the hook and say where it went.
+ * `modelmark install`: add the hook, say where it went, and, the first time,
+ * that modelmark downloads prices.
  */
 export async function installCommand(): Promise<void> {
     const { hook, style, outcome } = await install()
@@ -142,6 +147,13 @@ export async function installCommand(): Promise<void> {
 
     if (warning) {
         console.log(warning)
+    }
+
+    /*
+     * Like Next.js's telemetry notice, said once rather than on every run.
+     */
+    if (outcome !== 'unchanged') {
+        console.log(PRICES_NOTICE)
     }
 }
 

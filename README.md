@@ -153,7 +153,9 @@ subscription or a negotiated rate costs something else.
   in `~/.cache/modelmark/prices.json`, so new models get priced without an
   upgrade. A commit starts a download in the background when the last try was
   over an hour ago. The commit never waits for it, and a failed download keeps
-  the prices you have. Set `MODELMARK_OFFLINE=1` to turn the downloads off.
+  the prices you have. CI skips the download (`CI` or
+  `CONTINUOUS_INTEGRATION` set, and not `false`). Set `MODELMARK_OFFLINE=1`
+  to turn the downloads off everywhere.
 - **An amend** adds its new replies to the cost already there. `summary`
   splits a commit with two marks evenly between them.
 - **Agents modelmark doesn't know** (`MODELMARK`) get no cost, since

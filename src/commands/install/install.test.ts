@@ -142,6 +142,7 @@ describe('the commands', () => {
             'Installed the hook in .husky/prepare-commit-msg',
             'This repository uses Husky, so commit that file to mark everyone’s commits',
             'modelmark isn’t on PATH yet, so the hook does nothing; run bun link in the modelmark checkout',
+            expect.stringContaining('models.dev'),
         ])
     })
 
@@ -156,6 +157,7 @@ describe('the commands', () => {
 
         expect(log.mock.calls.map(([line]) => line)).toEqual([
             'Installed the hook in .git/hooks/prepare-commit-msg',
+            expect.stringContaining('models.dev'),
             'Already installed in .git/hooks/prepare-commit-msg',
         ])
     })
@@ -203,10 +205,11 @@ describe('a repository that lists modelmark as a dependency', () => {
         expect(log.mock.calls.map(([line]) => line)).toEqual([
             'Installed the hook in .git/hooks/prepare-commit-msg',
             'modelmark isn’t in node_modules yet, so the hook does nothing until bun install runs',
+            expect.stringContaining('models.dev'),
         ])
     })
 
-    test('install stays quiet once node_modules has it', async () => {
+    test('install has no warning once node_modules has it', async () => {
         const repo = await enterRepo()
 
         writeFileSync(join(repo, 'package.json'), '{"devDependencies":{"modelmark":"^0.1.0"}}')
@@ -219,6 +222,7 @@ describe('a repository that lists modelmark as a dependency', () => {
 
         expect(log.mock.calls.map(([line]) => line)).toEqual([
             'Installed the hook in .git/hooks/prepare-commit-msg',
+            expect.stringContaining('models.dev'),
         ])
     })
 

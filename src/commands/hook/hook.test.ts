@@ -12,7 +12,11 @@ import type { Detection, PriceList } from '../../agents/types'
 
 vi.mock(import('node:child_process'), async importOriginal => ({
     ...(await importOriginal()),
-    spawn: vi.fn(() => ({ unref: vi.fn() })) as unknown as typeof spawn,
+    spawn: vi.fn(() => {
+        const child = { on: vi.fn(() => child), unref: vi.fn() }
+
+        return child
+    }) as unknown as typeof spawn,
 }))
 
 vi.mock(import('../../agents/mark'), async importOriginal => ({

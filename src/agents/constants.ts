@@ -87,6 +87,14 @@ export const FIRST_PARTY_PROVIDERS = [
 /** Set to anything to turn off price downloads; prices already downloaded still apply. */
 export const OFFLINE_VARIABLE = 'MODELMARK_OFFLINE'
 
+/**
+ * The variables CI services set; a refresh there is skipped, since the
+ * machine and its cache are thrown away after the job. The check is
+ * sindresorhus/is-in-ci's, which update-notifier uses: set, and not `0` or
+ * `false`.
+ */
+export const CI_VARIABLES: readonly string[] = ['CI', 'CONTINUOUS_INTEGRATION']
+
 /** How old the last price refresh may be before a commit starts another. */
 export const PRICE_REFRESH_MS = 3_600_000
 

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { cachePath, readState } from '../system/state'
 import {
     CATALOG_URL,
+    CI_VARIABLES,
     FIRST_PARTY_PROVIDERS,
     OFFLINE_VARIABLE,
     PRICE_FETCH_TIMEOUT_MS,
@@ -43,14 +44,23 @@ export function loadPriceList(env: Env): PriceList {
 }
 
 /**
- * Whether a commit should start a price refresh: never when offline, else
- * when the last one is an hour old.
+ * Whether a CI variable says this is CI: set, and not `0` or `false`.
+ * @param value - the variable's value
+ * @returns true in CI
+ */
+function inCi(value: string | undefined): boolean {
+    return value !== undefined && value !== '0' && value !== 'false'
+}
+
+/**
+ * Whether a commit should start a price refresh: never when offline or in CI,
+ * else when the last one is an hour old.
  * @param env - the environment
  * @param now - the time (ms since the epoch)
  * @returns true when a refresh is due
  */
 export function priceRefreshDue(env: Env, now = Date.now()): boolean {
-    if (env[OFFLINE_VARIABLE]) {
+    if (env[OFFLINE_VARIABLE] || CI_VARIABLES.some(key => inCi(env[key]))) {
         return false
     }
 

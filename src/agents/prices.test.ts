@@ -92,6 +92,12 @@ describe('priceRefreshDue', () => {
         expect(priceRefreshDue(refreshedAgo(61 * 60_000), now)).toBe(true)
     })
 
+    test('never in CI, unless CI says false', () => {
+        expect(priceRefreshDue({ ...refreshedAgo(), CI: 'true' }, now)).toBe(false)
+        expect(priceRefreshDue({ ...refreshedAgo(), CONTINUOUS_INTEGRATION: '1' }, now)).toBe(false)
+        expect(priceRefreshDue({ ...refreshedAgo(), CI: 'false' }, now)).toBe(true)
+    })
+
     test('never when offline', () => {
         expect(priceRefreshDue({ ...refreshedAgo(), MODELMARK_OFFLINE: '1' }, now)).toBe(false)
     })

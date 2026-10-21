@@ -62,11 +62,18 @@ function refreshPricesIfDue(env: Env = process.env): void {
     }
 
     writeState(PRICE_REFRESH_STATE, String(Date.now()), env)
+    /*
+     * update-notifier's recipe: detached, output ignored, unreferenced, so the
+     * hook exits without waiting. A child that can't start emits `error`,
+     * which would otherwise crash the hook after the commit was marked.
+     */
     spawn(
         process.execPath,
         [fileURLToPath(new URL('../../cli.ts', import.meta.url)), 'refresh-prices'],
         { detached: true, stdio: 'ignore', env },
-    ).unref()
+    )
+        .on('error', () => undefined)
+        .unref()
 }
 
 /**
