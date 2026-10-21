@@ -14,7 +14,7 @@ import type { AgentId, ModelPrice, PriceList, SessionUse, TokenUse } from './typ
  * @param prices - the price list
  * @returns its prices, or undefined when the list doesn't have it
  */
-function priceOf(model: string, prices: PriceList): ModelPrice | undefined {
+export function priceOf(model: string, prices: PriceList): ModelPrice | undefined {
     const id = model.slice(model.lastIndexOf('/') + 1)
 
     return Object.hasOwn(prices, id) ? prices[id] : undefined

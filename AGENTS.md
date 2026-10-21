@@ -26,6 +26,7 @@ bun src/cli.ts --version                   # Package version
 bun src/cli.ts install|uninstall           # Add or remove the hook (node_modules line when package.json lists modelmark)
 bun src/cli.ts doctor [--json]             # Check the setup and show the mark a commit would get
 bun src/cli.ts summary [range] [--format F] # Count trailers across commits (default: this branch's); F is text, json, table or badges; --color agent=hex and --logo agent=file style an agent's badges
+bun src/cli.ts prices [filter] [--all]     # The prices commits are costed with (default: models this repo's marks name); --format text, json or table
 bun src/cli.ts hook <msg-file> [source]    # Hidden: what the hook runs to append the trailer
 bun scripts/prices                         # Refresh prices.json from models.dev (before a release)
 bun run bump                               # Release: bump the version, commit, tag v<version>, push

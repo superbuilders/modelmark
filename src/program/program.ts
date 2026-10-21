@@ -6,10 +6,12 @@ import { version } from '../../package.json'
 import { doctorCommand } from '../commands/doctor/doctor'
 import { hookCommand } from '../commands/hook/hook'
 import { installCommand, uninstallCommand } from '../commands/install/install'
-import { refreshPricesCommand } from '../commands/prices/prices'
+import { PRICE_FORMATS } from '../commands/prices/constants'
+import { pricesCommand, refreshPricesCommand } from '../commands/prices/prices'
 import { HEX_COLOR, SUMMARY_FORMATS } from '../commands/summary/constants'
 import { summaryCommand } from '../commands/summary/summary'
 
+import type { PricesOptions } from '../commands/prices/types'
 import type { AgentColors, AgentLogos } from '../commands/summary/types'
 
 /**
@@ -110,6 +112,24 @@ export function buildProgram(): Command {
                 .default({}, 'none'),
         )
         .action(summaryCommand)
+
+    program
+        .command('prices')
+        .description('show the prices commits are costed with')
+        .argument(
+            '[filter]',
+            'part of a model id, such as opus (default: the models this repository’s commits are marked with)',
+        )
+        .addOption(new Option('--all', 'show every model'))
+        .addOption(
+            new Option('--format <format>', 'how to print the prices')
+                .choices(PRICE_FORMATS)
+                .default('text'),
+        )
+        .addOption(new Option('--json', 'shorthand for --format json').conflicts('format'))
+        .action((filter: string | undefined, options: PricesOptions) =>
+            pricesCommand(filter, options),
+        )
 
     program
         .command('hook', { hidden: true })

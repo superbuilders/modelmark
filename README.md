@@ -76,6 +76,7 @@ inside an agent to see that agent's mark.
 | `modelmark uninstall`       | Removes it                                               |
 | `modelmark doctor`          | Checks the setup and shows the mark a commit would get   |
 | `modelmark summary [range]` | Counts the marks across commits (default: this branch's) |
+| `modelmark prices [filter]` | Shows the prices commits are costed with                 |
 
 `summary` with no range covers the commits on this branch that aren't on the
 default branch. `doctor` takes `--json`. `summary` takes `--format`: `text` (the
@@ -163,6 +164,24 @@ subscription or a negotiated rate costs something else.
   (`--no-session`), which keeps no log.
 - **A cost under a cent** is written to four places (`$0.0031`), so cheap
   commits still add up in `summary`.
+
+`modelmark prices` shows the prices behind your commits: the models this
+repository's commits are marked with. Name part of a model to look it up
+(`modelmark prices opus`), or pass `--all`. Like `summary`, it takes
+`--format table` and `--json`.
+
+```console
+$ modelmark prices
+Models this repository’s commits are marked with
+US dollars per million tokens, list prices from models.dev, fetched 22 minutes ago
+
+Model             Context  Input  Output  Cache read  Cache write
+claude-haiku-5-5  <=100k    0.10    0.50        0.01        0.125
+                  >100k     0.50    2.50        0.05        0.625
+kimi-k3           all       3.00   15.00        0.30         3.00
+
+A reply past a context size pays that row’s prices for all its tokens.
+```
 
 ## Supported harnesses
 
