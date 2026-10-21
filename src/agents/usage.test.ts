@@ -9,7 +9,11 @@ import { readSessionUse } from './usage'
 /** The repository every reply below was made in. */
 const REPO = mkdtempSync(join(tmpdir(), 'modelmark-usage-repo-'))
 
+/** Another repository, whose work the replies above must not pay for. */
+const OTHER = mkdtempSync(join(tmpdir(), 'modelmark-usage-other-'))
+
 mkdirSync(join(REPO, '.git'))
+mkdirSync(join(OTHER, '.git'))
 
 /**
  * Write JSONL records to a file, creating its folders.
@@ -158,6 +162,30 @@ describe('Claude Code', () => {
     test('a missing session gives nothing', () => {
         expect(readSessionUse('claude-code', {}, undefined, REPO)).toBeUndefined()
     })
+
+    test('counts a reply with no message id, and a tool call with no input', () => {
+        const config = scratch()
+        const reply = claudeReply('10:00', 'm1', { output_tokens: 3 }) as {
+            message: Record<string, unknown>
+        }
+
+        reply.message = {
+            model: 'claude-opus-5-5',
+            usage: { output_tokens: 3 },
+            content: [{ type: 'tool_use' }],
+        }
+        writeLog(join(config, 'projects', '-repo', 's1.jsonl'), [reply, reply])
+
+        const env = { CLAUDE_CODE_SESSION_ID: 's1', CLAUDE_CONFIG_DIR: config }
+
+        expect(readSessionUse('claude-code', env, undefined, REPO)?.uses).toHaveLength(2)
+    })
+
+    test('skips a log not written since the point', () => {
+        expect(readSessionUse('claude-code', session(), Date.now() + 60_000, REPO)?.uses).toEqual(
+            [],
+        )
+    })
 })
 
 describe('Codex', () => {
@@ -213,6 +241,46 @@ describe('Codex', () => {
         ])
     })
 
+    test('a missing thread gives nothing', () => {
+        expect(readSessionUse('codex', {}, undefined, REPO)).toBeUndefined()
+    })
+
+    test('charges a reply only for the repository its tool calls worked in', () => {
+        const home = scratch()
+
+        /**
+         * A tool call record.
+         * @param time - `hh:mm`
+         * @param payload - the call
+         * @returns the record
+         */
+        function call(time: string, payload: object): object {
+            return { timestamp: new Date(at(time)).toISOString(), type: 'response_item', payload }
+        }
+
+        writeLog(join(home, 'sessions', '2026', '10', '20', 'rollout-x-t2.jsonl'), [
+            codexTurn('09:00', 'gpt-6.1-sol'),
+            call('09:01', {
+                type: 'function_call',
+                arguments: JSON.stringify({ cmd: `cat ${OTHER}/a.txt` }),
+            }),
+            codexUsage('09:02', { input_tokens: 1, output_tokens: 1 }),
+            call('09:03', { type: 'custom_tool_call', input: `*** Update File: ${REPO}/b.ts` }),
+            codexUsage('09:04', { input_tokens: 2, output_tokens: 2 }),
+            call('09:05', {
+                type: 'local_shell_call',
+                action: { type: 'exec', command: ['ls'], working_directory: OTHER },
+            }),
+            codexUsage('09:06', { input_tokens: 3, output_tokens: 3 }),
+        ])
+
+        const env = { CODEX_THREAD_ID: 't2', CODEX_HOME: home, HOME: home }
+
+        expect(readSessionUse('codex', env, undefined, REPO)?.uses.map(use => use.output)).toEqual([
+            2,
+        ])
+    })
+
     test('a reply after the point takes the model of the turn before the point', () => {
         const use = readSessionUse('codex', thread(), at('09:30'), REPO)
 
@@ -221,6 +289,24 @@ describe('Codex', () => {
 })
 
 describe('Pi', () => {
+    test('a missing session file gives nothing', () => {
+        expect(readSessionUse('pi', {}, undefined, REPO)).toBeUndefined()
+    })
+
+    test('a reply with no time counts only before the first commit', () => {
+        const file = writeLog(join(scratch(), '2026-10-20_p2.jsonl'), [
+            { type: 'session', cwd: REPO },
+            {
+                type: 'message',
+                message: { role: 'assistant', model: 'kimi-k3', usage: { output: 5 } },
+            },
+        ])
+        const env = { PI_SESSION_FILE: file }
+
+        expect(readSessionUse('pi', env, undefined, REPO)?.uses).toHaveLength(1)
+        expect(readSessionUse('pi', env, at('09:00'), REPO)?.uses).toEqual([])
+    })
+
     test('reads each reply after the point', () => {
         const file = writeLog(join(scratch(), '2026-10-20_p1.jsonl'), [
             { type: 'session', cwd: REPO },

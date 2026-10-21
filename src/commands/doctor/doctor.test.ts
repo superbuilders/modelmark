@@ -99,6 +99,13 @@ describe('doctorChecks', () => {
         ])
     })
 
+    test('a repository without a preference wants the PATH hook', () => {
+        expect(doctorChecks({ ...HEALTHY, wanted: null })[1]).toEqual({
+            level: 'ok',
+            text: 'The hook is installed in .git/hooks/prepare-commit-msg',
+        })
+    })
+
     test('promises a mark only once the hook works', () => {
         expect(doctorChecks({ ...HEALTHY, hook: null })[3]).toEqual({
             level: 'ok',

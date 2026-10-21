@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -55,6 +55,16 @@ describe('prices', () => {
             join(cache, 'modelmark', 'prices.json'),
             JSON.stringify({
                 'zz-plain-1': { input: 0.3, output: 1.2 },
+                'zz-full-1': { input: 1, output: 2, cacheRead: 0.1, cacheWrite: 1.25 },
+                'zz-long-1': {
+                    input: 1,
+                    output: 2,
+                    cacheRead: 0.1,
+                    cacheWrite: 1.25,
+                    tiers: [
+                        { input: 2, output: 4, cacheRead: 0.2, cacheWrite: 2.5, above: 1_000_000 },
+                    ],
+                },
                 'zz-tiered-1': {
                     input: 2,
                     output: 12,
@@ -78,6 +88,7 @@ describe('prices', () => {
     async function printed(...args: Parameters<typeof pricesCommand>): Promise<string> {
         const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
 
+        log.mockClear()
         await pricesCommand(...args)
 
         return log.mock.calls.map(([line]) => String(line)).join('\n')
@@ -136,6 +147,15 @@ describe('prices', () => {
             '',
         ])
         expect(output).toMatch(/mystery-9 +\| +\| no price/)
+        expect(
+            JSON.parse(await printed(undefined, { json: true }, cached(), repo)).prices[
+                'mystery-9'
+            ],
+        ).toBeNull()
+    })
+
+    test('says when no model matches a filter', async () => {
+        expect(await printed('no-such-model', {}, cached())).toMatch(/^No model matches/)
     })
 
     test('says how to see prices when no commit is marked', async () => {
@@ -166,6 +186,43 @@ describe('prices', () => {
         expect(await printed('no-such-model', { format: 'markdown' }, cached())).toMatch(
             /^\| Model +\| Context/,
         )
+    })
+
+    test('says how old the prices are, or that they are the shipped ones', async () => {
+        const env = cached()
+        const file = join(env.XDG_CACHE_HOME, 'modelmark', 'prices.json')
+
+        for (const [minutes, words] of [
+            [30, 'fetched 30 minutes ago'],
+            [5 * 60, 'fetched 5 hours ago'],
+            [3 * 24 * 60, 'fetched 3 days ago'],
+        ] as const) {
+            const time = new Date(Date.now() - minutes * 60_000)
+
+            utimesSync(file, time, time)
+            expect(await printed('zz-full', {}, env)).toContain(words)
+        }
+
+        const shipped = { XDG_CACHE_HOME: mkdtempSync(join(tmpdir(), 'modelmark-shipped-')) }
+
+        expect(await printed('opus', {}, shipped)).toContain('as modelmark shipped them')
+        expect(JSON.parse(await printed('opus', { json: true }, shipped)).fetched).toBeNull()
+    })
+
+    test('a model with every price and no tiers needs no notes', async () => {
+        const output = await printed('zz-full', {}, cached())
+
+        expect(output).toContain('zz-full-1')
+        expect(output).not.toContain('=in:')
+        expect(output).not.toContain('context size')
+    })
+
+    test('names a million-token context as 1M', async () => {
+        expect(await printed('zz-long', {}, cached())).toContain('>1M')
+    })
+
+    test('--all lists every model', async () => {
+        expect(await printed(undefined, { all: true }, cached())).toMatch(/^All \d+ models/)
     })
 
     test('JSON has the rates as numbers and when they were fetched', async () => {

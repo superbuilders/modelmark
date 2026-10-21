@@ -26,17 +26,25 @@ test('keeps first-party prices by model id, with context tiers smallest first', 
                         tiers: [
                             { input: 4, output: 15, tier: { type: 'context', size: 272_000 } },
                             { input: 1, output: 1, tier: { type: 'time' } },
+                            { input: 5, output: 5 },
                             { input: 3, output: 12, tier: { type: 'context', size: 128_000 } },
                         ],
                     },
                 },
                 'no-price': {},
+                'input-only': { cost: { input: 1 } },
             },
         },
-        anthropic: { models: { 'claude-opus-5-5': { cost: { input: 4, output: 20 } } } },
+        anthropic: {
+            models: {
+                'claude-opus-5-5': { cost: { input: 4, output: 20 } },
+                'claude-haiku-5-5': { cost: { input: 1, output: 5 } },
+            },
+        },
     })
 
     expect(list).toEqual({
+        'claude-haiku-5-5': { input: 1, output: 5 },
         'claude-opus-5-5': { input: 4, output: 20 },
         'gpt-6.1-sol': {
             input: 2,
@@ -48,7 +56,7 @@ test('keeps first-party prices by model id, with context tiers smallest first', 
             ],
         },
     })
-    expect(Object.keys(list)).toEqual(['claude-opus-5-5', 'gpt-6.1-sol'])
+    expect(Object.keys(list)).toEqual(['claude-haiku-5-5', 'claude-opus-5-5', 'gpt-6.1-sol'])
 })
 
 describe('loadPriceList', () => {

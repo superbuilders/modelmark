@@ -175,6 +175,16 @@ describe('summaryCommand', () => {
         ])
     })
 
+    test("prints a mark's cost beside its count", async () => {
+        const repo = await repoWith(['one\n\nAssisted-by: pi:kimi-k3\nAssisted-cost: $1.50'])
+        const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+        vi.spyOn(process, 'cwd').mockReturnValue(repo)
+        await summaryCommand('base..HEAD', {})
+
+        expect(log).toHaveBeenCalledWith('base..HEAD: 1 commit\n  1  pi:kimi-k3  ~$1.50')
+    })
+
     test("defaults to this branch's commits, and prints JSON with the range", async () => {
         const repo = await repoWith([])
         const log = vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -221,6 +231,19 @@ describe('summaryTable', () => {
         })
 
         expect(markdown.split('\n')[2]).toBe('| Pi      | kimi-k3 |        | 1       | ~$0.50 |')
+    })
+
+    test('leaves the cost blank for a mark without one', () => {
+        const markdown = summaryTable({
+            total: 2,
+            unmarked: 0,
+            marks: [
+                { mark: 'pi:kimi-k3', commits: 1, cost: 0.5 },
+                { mark: 'pi:glm-6', commits: 1 },
+            ],
+        })
+
+        expect(markdown.split('\n')[3]).toMatch(/\| glm-6 +\| +\| 1 +\| +\|$/)
     })
 
     test('splits each mark into harness, model and effort, with unmarked commits last', () => {

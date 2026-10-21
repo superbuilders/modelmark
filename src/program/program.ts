@@ -65,10 +65,13 @@ function addLogo(value: string, previous: AgentLogos): AgentLogos {
  */
 function formatOption(description: string, formats: readonly string[]): Option {
     const option = new Option('--format <format>', description).choices(formats).default('text')
-    const choose = option.parseArg
+    /*
+     * choices() always sets the parser, which checks the value is one of them.
+     */
+    const choose = option.parseArg as (value: string, previous: string) => string
 
     return option.argParser((value: string, previous: string) =>
-        choose ? choose(value === 'table' ? 'markdown' : value, previous) : value,
+        choose(value === 'table' ? 'markdown' : value, previous),
     )
 }
 

@@ -84,6 +84,9 @@ test('summary takes --badge-color for an agent it does not know, and refuses a b
     await expect(
         program.parseAsync(['summary', '--badge-color', 'jojo=red'], { from: 'user' }),
     ).rejects.toThrow(/expected <agent>=<hex color>/)
+    await expect(
+        program.parseAsync(['summary', '--badge-color', 'jojo'], { from: 'user' }),
+    ).rejects.toThrow(/expected <agent>=<hex color>/)
 })
 
 test('summary reads --badge-logo from an SVG file, and refuses a file that is not one', async () => {
@@ -110,4 +113,12 @@ test('summary reads --badge-logo from an SVG file, and refuses a file that is no
     await expect(
         program.parseAsync(['summary', '--badge-logo', `jojo=${text}`], { from: 'user' }),
     ).rejects.toThrow(/expected <agent>=<svg file>/)
+    await expect(
+        program.parseAsync(['summary', '--badge-logo', logo], { from: 'user' }),
+    ).rejects.toThrow(/expected <agent>=<svg file>/)
+    await expect(
+        program.parseAsync(['summary', '--badge-logo', `jojo=${folder}/missing.svg`], {
+            from: 'user',
+        }),
+    ).rejects.toThrow(/can't read/)
 })
