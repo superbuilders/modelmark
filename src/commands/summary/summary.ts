@@ -40,6 +40,8 @@ export async function summarize(range: string, cwd?: string): Promise<Summary> {
 
         if (marks.size === 0) {
             unmarked++
+
+            continue
         }
 
         const cost = messageCost(commit)
@@ -61,7 +63,7 @@ export async function summarize(range: string, cwd?: string): Promise<Summary> {
             }
 
             if (share) {
-                count.tokens = count.tokens ? addTokens([count.tokens, share]) : share
+                count.tokens = addTokens([share], count.tokens)
             }
 
             counts.set(mark, count)

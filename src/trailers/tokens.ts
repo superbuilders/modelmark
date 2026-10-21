@@ -14,18 +14,20 @@ const KIND_BY_NAME: Readonly<Record<string, keyof TokenCounts>> = Object.fromEnt
 /**
  * Add up token counts.
  * @param counts - the counts, such as each reply's
- * @returns their sum
+ * @param start - a tally to add them to, such as what a message already has (default: none)
+ * @returns the sum, as a new object
  */
-export function addTokens(counts: readonly TokenCounts[]): TokenCounts {
-    return counts.reduce(
-        (sum, count) => ({
-            input: sum.input + count.input,
-            cacheWrite: sum.cacheWrite + count.cacheWrite,
-            output: sum.output + count.output,
-            cacheRead: sum.cacheRead + count.cacheRead,
-        }),
-        NO_TOKENS,
-    )
+export function addTokens(counts: readonly TokenCounts[], start = NO_TOKENS): TokenCounts {
+    const sum = { ...start }
+
+    for (const count of counts) {
+        sum.input += count.input
+        sum.cacheWrite += count.cacheWrite
+        sum.output += count.output
+        sum.cacheRead += count.cacheRead
+    }
+
+    return sum
 }
 
 /**

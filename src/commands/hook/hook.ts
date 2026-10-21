@@ -102,13 +102,12 @@ export async function usageMessage(
     if (use.uses.length > 0) {
         const message = readFileSync(messageFile, 'utf8')
         const usd = usesCost(use.uses, prices ?? loadPriceList(env))
-        const earlier = messageTokens(message)
 
         if (usd !== null) {
             trailers.push(costTrailer((messageCost(message) ?? 0) + usd))
         }
 
-        trailers.push(tokensTrailer(addTokens(earlier ? [earlier, ...use.uses] : use.uses)))
+        trailers.push(tokensTrailer(addTokens(use.uses, messageTokens(message))))
 
         await writeTrailers(messageFile, trailers, 'replace')
     }
