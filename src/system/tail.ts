@@ -34,8 +34,8 @@ export function* recordsFromEnd(
 ): Generator<unknown> {
     const fd = openSync(path, 'r')
     /*
-     * One buffer serves every read, so a chunk without any wanted text costs
-     * a read and a search, never an allocation or a copy.
+     * One buffer serves every read, and only a block holding wanted text is
+     * copied and decoded.
      */
     const buffer = Buffer.allocUnsafe(chunkBytes)
 
@@ -69,12 +69,12 @@ export function* recordsFromEnd(
              * A wanted text sits inside one line: a whole one in this chunk,
              * or the line this chunk ends with, which the carry continues.
              */
+            const inLines = keep.length === 0 || keep.some(text => lines.includes(text))
             const open =
-                carry.length > 0
+                !inLines && carry.length > 0
                     ? Buffer.concat([lines.subarray(lines.lastIndexOf('\n') + 1), ...carry])
                     : undefined
-            const wanted =
-                keep.length === 0 || keep.some(text => lines.includes(text) || open?.includes(text))
+            const wanted = inLines || (open !== undefined && keep.some(text => open.includes(text)))
             const block = wanted ? Buffer.concat([lines, ...carry]).toString('utf8') : ''
 
             carry = [Buffer.from(chunk.subarray(0, Math.max(cut, 0)))]

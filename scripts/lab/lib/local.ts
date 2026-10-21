@@ -78,24 +78,26 @@ async function runScenario(
         return { ...base, status, reason: String(error), seconds: secondsSince(started) }
     }
 
-    const trailers = await workspace.trailers()
-    const costs = await workspace.costs()
-    const hookMs = await workspace.hookTimes()
+    const [trailers, hookMs, hookErrors] = await Promise.all([
+        workspace.trailers(),
+        workspace.hookTimes(),
+        workspace.hookErrors(),
+    ])
     const reason = verdict({
         expected: scenario.expected,
-        trailers,
+        trailers: trailers?.marks ?? null,
         costed: scenario.expected.length > 0 && scenario.priced !== false,
-        costs,
+        costs: trailers?.costs ?? [],
         hookMs,
-        hookErrors: await workspace.hookErrors(),
+        hookErrors,
     })
 
     return {
         ...base,
         status: reason ? 'failed' : 'passed',
         ...(reason ? { reason } : {}),
-        trailers: trailers ?? [],
-        costs,
+        trailers: trailers?.marks ?? [],
+        costs: trailers?.costs ?? [],
         hookMs,
         seconds: secondsSince(started),
     }

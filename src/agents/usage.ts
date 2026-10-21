@@ -95,14 +95,12 @@ function claudeCodeUse(
                 seen.add(key)
             }
 
-            const usage = (record as { message: { usage?: unknown } }).message.usage
-
             uses.push({
                 model,
-                input: countAt(usage, 'input_tokens'),
-                cacheRead: countAt(usage, 'cache_read_input_tokens'),
-                cacheWrite: countAt(usage, 'cache_creation_input_tokens'),
-                output: countAt(usage, 'output_tokens'),
+                input: countAt(record, 'message', 'usage', 'input_tokens'),
+                cacheRead: countAt(record, 'message', 'usage', 'cache_read_input_tokens'),
+                cacheWrite: countAt(record, 'message', 'usage', 'cache_creation_input_tokens'),
+                output: countAt(record, 'message', 'usage', 'output_tokens'),
             })
             through = later(through, recordTime(record))
         }
@@ -159,16 +157,18 @@ function codexUse(env: Env, since: number | undefined): Omit<SessionUse, 'sessio
             continue
         }
 
-        const usage = (record as { payload: { usage?: unknown } }).payload.usage
-        const cacheRead = countAt(usage, 'cached_input_tokens')
-        const cacheWrite = countAt(usage, 'cache_write_input_tokens')
+        const cacheRead = countAt(record, 'payload', 'usage', 'cached_input_tokens')
+        const cacheWrite = countAt(record, 'payload', 'usage', 'cache_write_input_tokens')
 
         uses.push({
             model: model ?? UNKNOWN_MODEL,
-            input: Math.max(0, countAt(usage, 'input_tokens') - cacheRead - cacheWrite),
+            input: Math.max(
+                0,
+                countAt(record, 'payload', 'usage', 'input_tokens') - cacheRead - cacheWrite,
+            ),
             cacheRead,
             cacheWrite,
-            output: countAt(usage, 'output_tokens'),
+            output: countAt(record, 'payload', 'usage', 'output_tokens'),
         })
         through = later(through, recordTime(record))
     }
@@ -208,14 +208,12 @@ function piUse(env: Env, since: number | undefined): Omit<SessionUse, 'session'>
             continue
         }
 
-        const usage = (record as { message: { usage?: unknown } }).message.usage
-
         uses.push({
             model,
-            input: countAt(usage, 'input'),
-            cacheRead: countAt(usage, 'cacheRead'),
-            cacheWrite: countAt(usage, 'cacheWrite'),
-            output: countAt(usage, 'output'),
+            input: countAt(record, 'message', 'usage', 'input'),
+            cacheRead: countAt(record, 'message', 'usage', 'cacheRead'),
+            cacheWrite: countAt(record, 'message', 'usage', 'cacheWrite'),
+            output: countAt(record, 'message', 'usage', 'output'),
         })
         through = later(through, recordTime(record))
     }

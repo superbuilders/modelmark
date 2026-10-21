@@ -101,10 +101,7 @@ function checkpointName(agent: AgentId, session: string): string {
  * @param env - the environment
  * @returns the replies, or undefined when the session's logs can't be read
  */
-export function usesSinceLastCommit(
-    agent: AgentId,
-    env: Env,
-): (SessionUse & { agent: AgentId }) | undefined {
+export function usesSinceLastCommit(agent: AgentId, env: Env): SessionUse | undefined {
     const session = sessionName(agent, env)
 
     if (!session) {
@@ -112,19 +109,19 @@ export function usesSinceLastCommit(
     }
 
     const saved = Number(readState(checkpointName(agent, session), env))
-    const use = readSessionUse(agent, env, saved > 0 ? saved : undefined)
 
-    return use && { ...use, agent }
+    return readSessionUse(agent, env, saved > 0 ? saved : undefined)
 }
 
 /**
  * Mark a session's replies as counted, so the next commit starts after them.
+ * @param agent - which agent
  * @param use - the replies just counted
  * @param env - the environment
  */
-export function markCounted(use: SessionUse & { agent: AgentId }, env: Env): void {
+export function markCounted(agent: AgentId, use: SessionUse, env: Env): void {
     if (use.through !== undefined) {
-        writeState(checkpointName(use.agent, use.session), String(use.through), env)
+        writeState(checkpointName(agent, use.session), String(use.through), env)
     }
 }
 

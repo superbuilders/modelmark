@@ -65,6 +65,18 @@ async function waitForFile(path: string, timeoutMs: number): Promise<string | nu
 }
 
 /**
+ * The values `git log` printed for one trailer key, one per line.
+ * @param lines - the printed values
+ * @returns them, trimmed, without blank lines
+ */
+function values(lines: string): string[] {
+    return lines
+        .split('\n')
+        .map(value => value.trim())
+        .filter(Boolean)
+}
+
+/**
  * One scenario's scratch folder: a repository with the hook installed, and the
  * output of everything the scenario ran.
  */
@@ -164,40 +176,26 @@ export class Workspace implements ScenarioWorkspace {
     }
 
     /**
-     * The Assisted-by values on the newest commit.
-     * @returns them, or null when no lab commit was made
+     * The Assisted-by and Assisted-cost values on the newest commit.
+     * @returns them, in order, or null when no lab commit was made
      */
-    async trailers(): Promise<string[] | null> {
+    async trailers(): Promise<{ marks: string[]; costs: string[] } | null> {
         const result = await spawn(
-            ['git', 'log', '-1', '--format=%s%x1f%(trailers:key=Assisted-by,valueonly)'],
+            [
+                'git',
+                'log',
+                '-1',
+                '--format=%s%x1f%(trailers:key=Assisted-by,valueonly)%x1f%(trailers:key=Assisted-cost,valueonly)',
+            ],
             { cwd: this.repo },
         )
-        const [subject, values = ''] = result.stdout.split('\u001F')
+        const [subject, marks = '', costs = ''] = result.stdout.split('\u001F')
 
         if (result.exitCode !== 0 || subject !== COMMIT_MESSAGE) {
             return null
         }
 
-        return values
-            .split('\n')
-            .map(value => value.trim())
-            .filter(Boolean)
-    }
-
-    /**
-     * The newest commit's Assisted-cost values.
-     * @returns the values, in order
-     */
-    async costs(): Promise<string[]> {
-        const result = await spawn(
-            ['git', 'log', '-1', '--format=%(trailers:key=Assisted-cost,valueonly)'],
-            { cwd: this.repo },
-        )
-
-        return result.stdout
-            .split('\n')
-            .map(value => value.trim())
-            .filter(Boolean)
+        return { marks: values(marks), costs: values(costs) }
     }
 
     /**

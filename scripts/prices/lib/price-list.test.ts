@@ -4,7 +4,12 @@ import { priceList } from './price-list'
 
 test('keeps first-party prices by model id, with context tiers', () => {
     const list = priceList({
-        openrouter: { models: { 'gpt-6.1-sol': { cost: { input: 9, output: 9 } } } },
+        openrouter: {
+            models: {
+                'gpt-6.1-sol': { cost: { input: 9, output: 9 } },
+                'resold-1': { cost: { input: 9, output: 9 } },
+            },
+        },
         openai: {
             models: {
                 'gpt-6.1-sol': {

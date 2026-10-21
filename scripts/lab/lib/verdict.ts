@@ -10,7 +10,7 @@ interface Evidence {
     expected: ExpectedMark[]
     /** The newest commit's Assisted-by values, or null when no lab commit was made. */
     trailers: string[] | null
-    /** Whether the commit should carry a cost: true whenever it should carry a mark. */
+    /** Whether the commit should carry a cost line. */
     costed: boolean
     /** The newest commit's Assisted-cost values. */
     costs: string[]

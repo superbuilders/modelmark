@@ -1,9 +1,6 @@
 /** Where models.dev publishes its catalog. */
 export const CATALOG_URL = 'https://models.dev/api.json'
 
-/** The price list modelmark ships, relative to the repository root. */
-export const PRICES_FILE = 'prices.json'
-
 /**
  * The providers whose own prices are kept, in the order a model id two of them
  * share is taken from. Resellers and gateways are left out: their prices carry

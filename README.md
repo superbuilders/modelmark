@@ -106,11 +106,11 @@ column when the commits carry costs:
 
 ```sh
 $ modelmark summary --format table
-| Harness     | Model           | Effort | Commits |
-| ----------- | --------------- | ------ | ------- |
-| Claude Code | claude-opus-5-5 | high   | 3       |
-| Codex       | gpt-5.6-terra   | medium | 1       |
-| No mark     |                 |        | 1       |
+| Harness     | Model           | Effort | Commits | Cost   |
+| ----------- | --------------- | ------ | ------- | ------ |
+| Claude Code | claude-opus-5-5 | high   | 3       | ~$6.20 |
+| Codex       | gpt-5.6-terra   | medium | 1       | ~$0.85 |
+| No mark     |                 |        | 1       |        |
 ```
 
 ## Reading a mark
@@ -138,7 +138,7 @@ would cost at the model maker's list prices. It is not what you paid: a
 subscription or a negotiated rate costs something else.
 
 - **Which replies:** everything the session did after the last commit it
-  made, subagents included. A session's first commit counts the whole session
+  made, Claude Code's subagents included. A session's first commit counts the whole session
   up to it. Every reply is counted once, whichever repository it ends up in.
 - **How it's priced:** each reply's tokens fall into four kinds, each with its
   own price: fresh input, input read from the prompt cache, input written to

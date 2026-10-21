@@ -93,7 +93,7 @@ export async function costMessage(
         ])
     }
 
-    markCounted(use, env)
+    markCounted(agent, use, env)
 
     return trailer
 }

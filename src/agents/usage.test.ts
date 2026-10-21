@@ -206,6 +206,11 @@ describe('Pi', () => {
         const file = writeLog(join(scratch(), '2026-10-20_p1.jsonl'), [
             {
                 type: 'message',
+                timestamp: new Date(at('09:00')).toISOString(),
+                message: { role: 'assistant', model: 'kimi-k3', usage: { output: 99 } },
+            },
+            {
+                type: 'message',
                 timestamp: new Date(at('10:00')).toISOString(),
                 message: {
                     role: 'assistant',
