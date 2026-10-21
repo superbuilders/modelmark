@@ -197,7 +197,7 @@ The newest version of each harness that passed every
 
 | Harness     | Linux   | macOS   |
 | ----------- | ------- | ------- |
-| Claude Code | 2.1.305 | 2.1.304 |
+| Claude Code | 2.1.306 | 2.1.304 |
 | Codex       | 0.154.0 | 0.163.0 |
 | Pi          | 1.3.0   | 0.84.3  |
 

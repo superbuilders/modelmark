@@ -1,7 +1,7 @@
 {
     "linux": {
         "claude-code": {
-            "version": "2.1.305",
+            "version": "2.1.306",
             "date": "2026-10-21"
         },
         "codex": {
