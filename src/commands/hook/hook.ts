@@ -1,8 +1,20 @@
+import { readFileSync } from 'node:fs'
+
+import { COST_TRAILER_KEY, SMALLEST_COST } from '../../agents/constants'
+import {
+    costValue,
+    markCounted,
+    messageCost,
+    readPriceList,
+    usesCost,
+    usesSinceLastCommit,
+} from '../../agents/cost'
 import { detect, markTrailer } from '../../agents/mark'
 import { git } from '../../system/command'
 import { SKIPPED_SOURCES } from './constants'
 
-import type { Detection } from '../../agents/types'
+import type { AgentId, Detection, PriceList } from '../../agents/types'
+import type { Env } from '../../system/types'
 
 /**
  * Append the agent's trailer to a commit message file.
@@ -37,9 +49,55 @@ export async function markMessage(
 }
 
 /**
- * The prepare-commit-msg hook. A merge is skipped before anything is looked
- * up, and the hook never fails the commit: a problem prints a warning and the
- * commit goes ahead unmarked.
+ * Add the estimated cost of the agent's replies since its last commit to a
+ * commit message file. An amend adds the new replies to the cost already
+ * there. The replies count as used even when their models have no price, so
+ * no later commit counts them again.
+ * @param messageFile - the message file git passes to prepare-commit-msg
+ * @param agent - the agent making the commit
+ * @param env - the environment (default: this process's)
+ * @param prices - the price list (default: the one modelmark ships)
+ * @returns the trailer written, or null when the commit gets none
+ */
+export async function costMessage(
+    messageFile: string,
+    agent: AgentId,
+    env: Env = process.env,
+    prices: PriceList = readPriceList(),
+): Promise<string | null> {
+    const use = usesSinceLastCommit(agent, env)
+
+    if (!use) {
+        return null
+    }
+
+    const usd = usesCost(use.uses, prices)
+    const total = usd === null ? null : (messageCost(readFileSync(messageFile, 'utf8')) ?? 0) + usd
+    let trailer: string | null = null
+
+    if (total !== null && total >= SMALLEST_COST) {
+        trailer = `${COST_TRAILER_KEY}: ${costValue(total)}`
+
+        await git([
+            'interpret-trailers',
+            '--in-place',
+            '--if-exists',
+            'replace',
+            '--trailer',
+            trailer,
+            messageFile,
+        ])
+    }
+
+    markCounted(use, env)
+
+    return trailer
+}
+
+/**
+ * The prepare-commit-msg hook: the mark, then the cost. A merge is skipped
+ * before anything is looked up, and the hook never fails the commit: a
+ * problem prints a warning and the commit goes ahead without what failed.
  * @param messageFile - the message file git passes
  * @param source - the message's source git passes, such as `merge`
  */
@@ -48,9 +106,27 @@ export async function hookCommand(messageFile: string, source?: string): Promise
         return
     }
 
+    let detection: Detection | null
+
     try {
-        await markMessage(messageFile, await detect())
+        detection = await detect()
+        await markMessage(messageFile, detection)
     } catch (error) {
         console.error(`modelmark: commit left unmarked (${String(error)})`)
+
+        return
+    }
+
+    /*
+     * A declared mark comes from an agent modelmark can't read the logs of.
+     */
+    if (!detection || detection.via === 'declared') {
+        return
+    }
+
+    try {
+        await costMessage(messageFile, detection.agent as AgentId)
+    } catch (error) {
+        console.error(`modelmark: commit left without a cost (${String(error)})`)
     }
 }

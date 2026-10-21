@@ -34,6 +34,9 @@ export const HEX_COLOR = /^[\da-f]{6}$/i
 /** The model and effort colors of a harness modelmark doesn't know and wasn't given a color for. */
 export const UNKNOWN_HARNESS_COLORS = { color: '6E7781', effortColor: '4F565D' } as const
 
+/** The lighter grey of a badge's cost, so it reads apart from the commit count beside it. */
+export const BADGE_COST_COLOR = '57606A'
+
 /** The lighter grey of the count on the badge for commits with no mark. */
 export const NO_MARK_COUNT_COLOR = '57606A'
 

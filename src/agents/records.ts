@@ -29,3 +29,26 @@ export function stringAt(record: unknown, ...keys: string[]): string | undefined
 
     return typeof value === 'string' && value !== '' ? value : undefined
 }
+
+/**
+ * Read a nested count from a parsed log record.
+ * @param record - a parsed JSON value
+ * @param keys - the path of object keys to follow
+ * @returns the number there, or 0 when it is missing or not a finite number
+ */
+export function countAt(record: unknown, ...keys: string[]): number {
+    const value = valueAt(record, ...keys)
+
+    return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+/**
+ * When a log record was written, from its top-level ISO `timestamp`.
+ * @param record - a parsed JSON value
+ * @returns milliseconds since the epoch, or undefined when it has no readable time
+ */
+export function recordTime(record: unknown): number | undefined {
+    const time = Date.parse(stringAt(record, 'timestamp') ?? '')
+
+    return Number.isNaN(time) ? undefined : time
+}

@@ -16,22 +16,22 @@ function parseLine(line: string): unknown {
 }
 
 /**
- * Search a JSONL log from its end for the newest record `pick` accepts.
+ * Read a JSONL log's records from its end, newest first.
  *
- * Session logs are append-only and can reach hundreds of megabytes, while the
- * answer is almost always in the last few records. Reading backwards one chunk
- * at a time makes the usual case a single small read; the whole file is read
- * only when no record matches.
+ * Session logs are append-only and can reach hundreds of megabytes, while
+ * what a caller wants is almost always in the last few records. Reading
+ * backwards one chunk at a time makes the usual case a single small read; the
+ * whole file is read only when the caller keeps going to the start.
  * @param path - the log file
- * @param pick - returns a value for a matching record, undefined otherwise
+ * @param keep - parse only lines holding one of these texts (default: every line), since decoding and parsing are most of the work
  * @param chunkBytes - read size per step
- * @returns pick's value for the newest matching record, or undefined
+ * @yields each parsed record, newest first (undefined for a line that is not JSON)
  */
-export function findLast<T>(
+export function* recordsFromEnd(
     path: string,
-    pick: (record: unknown) => T | undefined,
+    keep: readonly string[] = [],
     chunkBytes = TAIL_CHUNK_BYTES,
-): T | undefined {
+): Generator<unknown> {
     const fd = openSync(path, 'r')
 
     try {
@@ -63,28 +63,52 @@ export function findLast<T>(
                 continue
             }
 
-            const lines = Buffer.concat([chunk, ...carry])
-                .subarray(cut + 1)
-                .toString('utf8')
-                .split('\n')
+            const block = Buffer.concat([chunk, ...carry]).subarray(cut + 1)
+
+            carry = [chunk.subarray(0, Math.max(cut, 0))]
+
+            /*
+             * A block without any wanted text holds no wanted line, so it
+             * needn't be decoded.
+             */
+            if (keep.length > 0 && !keep.some(text => block.includes(text))) {
+                continue
+            }
+
+            const lines = block.toString('utf8').split('\n')
 
             for (let index = lines.length - 1; index >= 0; index--) {
                 const line = lines[index]
 
-                if (line) {
-                    const value = pick(parseLine(line))
-
-                    if (value !== undefined) {
-                        return value
-                    }
+                if (line && (keep.length === 0 || keep.some(text => line.includes(text)))) {
+                    yield parseLine(line)
                 }
             }
-
-            carry = [chunk.subarray(0, Math.max(cut, 0))]
         }
-
-        return undefined
     } finally {
         closeSync(fd)
     }
+}
+
+/**
+ * Search a JSONL log from its end for the newest record `pick` accepts.
+ * @param path - the log file
+ * @param pick - returns a value for a matching record, undefined otherwise
+ * @param chunkBytes - read size per step
+ * @returns pick's value for the newest matching record, or undefined
+ */
+export function findLast<T>(
+    path: string,
+    pick: (record: unknown) => T | undefined,
+    chunkBytes = TAIL_CHUNK_BYTES,
+): T | undefined {
+    for (const record of recordsFromEnd(path, [], chunkBytes)) {
+        const value = pick(record)
+
+        if (value !== undefined) {
+            return value
+        }
+    }
+
+    return undefined
 }

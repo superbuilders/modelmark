@@ -52,3 +52,18 @@ export const JSONL = '.jsonl'
 
 /** Claude Code's placeholder model on records it writes itself, not the model's replies. */
 export const CLAUDE_SYNTHETIC_MODEL = '<synthetic>'
+
+/** The commit trailer holding the estimated cost of the replies behind a commit. */
+export const COST_TRAILER_KEY = 'Assisted-cost'
+
+/** The price list modelmark ships, relative to modelmark's own folder. */
+export const PRICES_FILE = 'prices.json'
+
+/** A cost below this rounds to $0.00, so it gets no trailer. */
+export const SMALLEST_COST = 0.005
+
+/** Text every Claude Code and Pi record with a reply's token counts holds, so other lines needn't be parsed. */
+export const USAGE_KEYS: readonly string[] = ['"usage"']
+
+/** Text the Codex records the cost needs hold: a turn's model, and a reply's token counts. */
+export const CODEX_KEYS: readonly string[] = ['"turn_context"', '"token_count"']

@@ -1,12 +1,11 @@
-import { homedir } from 'node:os'
-import { join } from 'node:path'
-
-import { filesEndingWith, findFileNewestFirst, newestFile } from '../system/files'
+import { newestFile } from '../system/files'
 import { findLast } from '../system/tail'
-import { CLAUDE_SYNTHETIC_MODEL, JSONL, NO_MODEL_USE } from './constants'
+import { CLAUDE_SYNTHETIC_MODEL, NO_MODEL_USE } from './constants'
+import { claudeCodeLogs, codexLog } from './logs'
 import { stringAt } from './records'
 
-import type { AgentId, Env, ModelUse } from './types'
+import type { Env } from '../system/types'
+import type { AgentId, ModelUse } from './types'
 
 /**
  * Pair a model read from a log record with that record's effort.
@@ -21,29 +20,20 @@ function modelUse(model: string | undefined, effort: string | undefined): ModelU
 /**
  * The model and effort behind the latest reply in this Claude Code session.
  *
- * The log is `<config>/projects/<folder>/<session id>.jsonl`. A subagent's
- * replies go to `<session id>/subagents/*.jsonl` instead, so the most recently
- * written of these is the conversation that ran the commit. Each reply record
- * names its model and, beside it, the session's effort.
+ * A subagent's replies go to its own log, so the most recently written log is
+ * the conversation that ran the commit. Each reply record names its model
+ * and, beside it, the session's effort.
  * @param env - the environment
  * @returns the model and effort, or undefined
  */
 function claudeCode(env: Env): ModelUse | undefined {
-    const id = env.CLAUDE_CODE_SESSION_ID
+    const logs = claudeCodeLogs(env)
 
-    if (!id) {
+    if (!logs) {
         return undefined
     }
 
-    const projects = join(env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude'), 'projects')
-    const main = findFileNewestFirst(projects, name => name === `${id}${JSONL}`, 1)
-
-    if (!main) {
-        return undefined
-    }
-
-    const subagents = filesEndingWith(join(main.slice(0, -JSONL.length), 'subagents'), JSONL)
-    const log = newestFile(main, subagents)
+    const log = newestFile(logs.main, logs.subagents)
 
     return findLast(log, record => {
         const model = stringAt(record, 'message', 'model')
@@ -55,22 +45,13 @@ function claudeCode(env: Env): ModelUse | undefined {
 }
 
 /**
- * The model and effort of the latest turn in this Codex thread.
- *
- * The log is `<home>/sessions/<yyyy>/<mm>/<dd>/rollout-<time>-<thread id>.jsonl`,
- * and Codex writes one `turn_context` record naming both at the start of each turn.
+ * The model and effort of the latest turn in this Codex thread. Codex writes
+ * one `turn_context` record naming both at the start of each turn.
  * @param env - the environment
  * @returns the model and effort, or undefined
  */
 function codex(env: Env): ModelUse | undefined {
-    const id = env.CODEX_THREAD_ID
-
-    if (!id) {
-        return undefined
-    }
-
-    const sessions = join(env.CODEX_HOME ?? join(homedir(), '.codex'), 'sessions')
-    const log = findFileNewestFirst(sessions, name => name.endsWith(`-${id}${JSONL}`), 3)
+    const log = codexLog(env)
 
     return log
         ? findLast(log, record =>

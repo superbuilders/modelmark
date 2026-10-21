@@ -6,3 +6,12 @@
 export function commitsText(count: number): string {
     return count === 1 ? '1 commit' : `${count} commits`
 }
+
+/**
+ * An estimated cost, in words.
+ * @param usd - US dollars
+ * @returns `~$1.84`
+ */
+export function costText(usd: number): string {
+    return `~$${usd.toFixed(2)}`
+}

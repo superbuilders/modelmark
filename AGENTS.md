@@ -7,8 +7,10 @@ Instructions for coding agents working in this repository.
 `modelmark` records which coding agent (Claude Code, Codex, Pi) and which model
 made each git commit. A `prepare-commit-msg` hook finds the agent by walking up
 the process tree, reads the model and effort from the end of that agent's session log,
-and appends an `Assisted-by: <agent>:<model>@<effort>` trailer. A pull request summary then
-counts those trailers across the branch's commits. This is a single-package
+and appends an `Assisted-by: <agent>:<model>@<effort>` trailer, then an
+`Assisted-cost: $<usd>` trailer pricing the session's replies since its last
+commit. A pull request summary then counts those trailers across the branch's
+commits. This is a single-package
 Bun + TypeScript CLI.
 
 ## Commands
@@ -25,6 +27,7 @@ bun src/cli.ts install|uninstall           # Add or remove the hook (node_module
 bun src/cli.ts doctor [--json]             # Check the setup and show the mark a commit would get
 bun src/cli.ts summary [range] [--format F] # Count trailers across commits (default: this branch's); F is text, json, table or badges; --color agent=hex and --logo agent=file style an agent's badges
 bun src/cli.ts hook <msg-file> [source]    # Hidden: what the hook runs to append the trailer
+bun scripts/prices                         # Refresh prices.json from models.dev (before a release)
 bun run bump                               # Release: bump the version, commit, tag v<version>, push
 bun scripts/lab list|run|status|probe      # Real-harness checks, here and on the Mac (scripts/lab/README.md)
 ```
@@ -130,6 +133,23 @@ effort sits in the same record as the model for Claude Code (`effort`) and Codex
 are undocumented; when one changes, the model reads as `unknown` (or the effort
 is left off) and the agent is still recorded.
 
+## How cost works
+
+The hook reads each reply's token counts from the same logs (`agents/usage.ts`)
+into four buckets that never overlap: fresh input, cache reads, cache writes
+and output. Claude Code's and Pi's input already leaves out the cache; Codex's
+includes it and is subtracted. Thinking is inside output everywhere. Claude
+Code repeats a reply's record, so a reply counts once per message and request
+id; Codex repeats `token_count` when only rate limits change, so one counts
+only when the running total moved.
+
+Each reply is priced on its own from `prices.json`, a trimmed copy of
+models.dev's first-party prices (`scripts/prices`); a context tier prices the
+whole reply. A model without a price makes the commit's cost unknown, never
+$0. After each commit the hook saves the newest counted reply's time under
+`$XDG_STATE_HOME/modelmark/checkpoints/`, and the next commit counts only
+replies after it. An amend adds to the cost already in the message.
+
 The hook never fails a commit. Merge commits get no trailer.
 
 ## Scripts
@@ -178,9 +198,10 @@ tested-versions table; commit both. Adding a harness starts with
 
 modelmark is published to npm as `modelmark` from GitHub Actions with trusted
 publishing (no npm token). A pushed `v<version>` tag is the release: pushing
-`main` alone publishes nothing. On an up-to-date `main`, run `bun run bump`
+`main` alone publishes nothing. Refresh the prices first (`bun scripts/prices`)
+and commit any change. On an up-to-date `main`, run `bun run bump`
 (bumpp): it asks for the new version, updates `package.json`, commits
 `Release v<version>`, tags `v<version>`, and pushes both.
 `.github/workflows/release.yml` then checks that the tag matches
 `package.json`, runs the checks and tests, and publishes. The package ships
-`src` without tests, and `tested-versions.json`.
+`src` without tests, `tested-versions.json` and `prices.json`.

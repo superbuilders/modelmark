@@ -1,13 +1,13 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { detect } from '../../agents/mark'
-import { hookCommand, markMessage } from './hook'
+import { costMessage, hookCommand, markMessage } from './hook'
 
-import type { Detection } from '../../agents/types'
+import type { Detection, PriceList } from '../../agents/types'
 
 vi.mock(import('../../agents/mark'), async importOriginal => ({
     ...(await importOriginal()),
@@ -16,6 +16,7 @@ vi.mock(import('../../agents/mark'), async importOriginal => ({
 
 afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllEnvs()
 })
 
 const OPUS: Detection = {
@@ -101,7 +102,87 @@ describe('markMessage', () => {
     })
 })
 
+describe('costMessage', () => {
+    const PRICES: PriceList = { 'claude-opus-5-5': { input: 4, output: 20 } }
+
+    /**
+     * A Claude Code session with fresh state, and a way to add replies to it.
+     * @returns its environment and a function that appends a reply
+     */
+    function session(): { env: Record<string, string>; reply: (output: number) => void } {
+        const root = mkdtempSync(join(tmpdir(), 'modelmark-cost-'))
+        const log = join(root, 'config', 'projects', '-repo', 's1.jsonl')
+        let replies = 0
+
+        mkdirSync(join(log, '..'), { recursive: true })
+        writeFileSync(log, '')
+
+        return {
+            env: {
+                CLAUDE_CODE_SESSION_ID: 's1',
+                CLAUDE_CONFIG_DIR: join(root, 'config'),
+                XDG_STATE_HOME: join(root, 'state'),
+            },
+            reply: output => {
+                replies++
+                writeFileSync(
+                    log,
+                    `${JSON.stringify({
+                        type: 'assistant',
+                        timestamp: new Date(Date.UTC(2026, 9, 20, 10, replies)).toISOString(),
+                        message: {
+                            id: `m${replies}`,
+                            model: 'claude-opus-5-5',
+                            usage: { output_tokens: output },
+                        },
+                    })}\n`,
+                    { flag: 'a' },
+                )
+            },
+        }
+    }
+
+    test("adds the cost of the session's replies, then counts only new ones", async () => {
+        const { env, reply } = session()
+        const first = messageFile('One\n')
+        const second = messageFile('Two\n')
+
+        reply(100_000)
+        expect(await costMessage(first, 'claude-code', env, PRICES)).toBe('Assisted-cost: $2.00')
+
+        reply(50_000)
+        await costMessage(second, 'claude-code', env, PRICES)
+
+        expect(readFileSync(first, 'utf8')).toBe('One\n\nAssisted-cost: $2.00\n')
+        expect(readFileSync(second, 'utf8')).toBe('Two\n\nAssisted-cost: $1.00\n')
+    })
+
+    test('an amend adds its new replies to the cost already there', async () => {
+        const { env, reply } = session()
+        const path = messageFile('One\n\nAssisted-cost: $2.00\n')
+
+        reply(50_000)
+        await costMessage(path, 'claude-code', env, PRICES)
+
+        expect(readFileSync(path, 'utf8')).toBe('One\n\nAssisted-cost: $3.00\n')
+    })
+
+    test('replies without a price get no cost, and still count as used', async () => {
+        const { env, reply } = session()
+        const path = messageFile('One\n')
+
+        reply(100_000)
+        expect(await costMessage(path, 'claude-code', env, {})).toBeNull()
+        expect(await costMessage(path, 'claude-code', env, PRICES)).toBeNull()
+        expect(readFileSync(path, 'utf8')).toBe('One\n')
+    })
+})
+
 describe('hookCommand', () => {
+    beforeEach(() => {
+        vi.stubEnv('CLAUDE_CODE_SESSION_ID', '')
+    })
+
     test('marks the message with the detected agent', async () => {
         const path = messageFile('Fix the login bug\n')
 

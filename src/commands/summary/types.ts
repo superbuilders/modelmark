@@ -46,6 +46,13 @@ export interface MarkCount {
     mark: string
     /** Commits carrying it. */
     commits: number
+
+    /**
+     * The estimated cost of those commits in US dollars, from their cost
+     * lines; a commit with several marks splits its cost evenly between them.
+     * Absent when none of them has a cost line.
+     */
+    cost?: number
 }
 
 /**

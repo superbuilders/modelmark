@@ -10,7 +10,8 @@ import {
 import { findAgent } from './detect'
 import { readModelUse } from './models'
 
-import type { AgentId, Detection, Env, MarkParts } from './types'
+import type { Env } from '../system/types'
+import type { AgentId, Detection, MarkParts } from './types'
 
 /**
  * The mark an agent modelmark doesn't know declares in `MODELMARK`.

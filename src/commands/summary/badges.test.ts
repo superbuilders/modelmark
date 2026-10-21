@@ -57,6 +57,19 @@ describe('summaryBadges', () => {
         )
     })
 
+    test('ends a badge with its cost when its commits have one', () => {
+        const html = summaryBadges({
+            total: 1,
+            unmarked: 0,
+            marks: [{ mark: 'pi:kimi-k3', commits: 1, cost: 4.2 }],
+        })
+        const paths = [...html.matchAll(/src="([^"]*)"/g)].map(
+            ([, src]) => new URL(src ?? '').pathname,
+        )
+
+        expect(paths.at(-1)).toBe('/badge/~%244.20-57606A')
+    })
+
     test("escapes shields.io's separators and gives each harness its logo", () => {
         const html = summaryBadges({
             total: 2,

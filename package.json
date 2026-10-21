@@ -1,7 +1,7 @@
 {
     "name": "modelmark",
     "version": "0.1.6",
-    "description": "Marks each git commit with the coding agent, model and effort level that made it",
+    "description": "Marks each git commit with the coding agent, model and effort level that made it, and what its work cost",
     "keywords": [
         "git",
         "commit",
@@ -28,7 +28,8 @@
     "files": [
         "src",
         "!src/**/*.test.ts",
-        "tested-versions.json"
+        "tested-versions.json",
+        "prices.json"
     ],
     "scripts": {
         "bump": "bumpp --commit 'Release v%s' --tag 'v%s'",

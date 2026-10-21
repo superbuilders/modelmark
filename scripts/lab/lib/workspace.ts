@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { AGENT_TIMEOUT_MS, COMMIT_MESSAGE } from './constants'
 import { labEnv, shellQuote, spawn, tail } from './process'
 
-import type { Env } from '../../../src/agents/types'
+import type { Env } from '../../../src/system/types'
 import type { ScenarioWorkspace } from './types'
 
 /** How often a detached command's exit is checked for. */

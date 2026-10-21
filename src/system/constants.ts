@@ -25,3 +25,6 @@ export const HOOK_LINES: Readonly<Record<HookStyle, string>> = {
     path: 'if command -v modelmark >/dev/null 2>&1; then modelmark hook "$@" || true; fi',
     dependency: `if [ -x ${LOCAL_BIN} ]; then ${LOCAL_BIN} hook "$@" || true; fi`,
 }
+
+/** modelmark's folder under the user's state folder. */
+export const STATE_FOLDER = 'modelmark'

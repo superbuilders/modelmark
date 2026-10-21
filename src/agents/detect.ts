@@ -2,8 +2,8 @@ import { basename } from 'node:path'
 
 import { HARNESS_COMMANDS, MAX_TREE_DEPTH, SCRIPT_RUNTIMES } from './constants'
 
-import type { ProcessTable } from '../system/types'
-import type { AgentId, Env, FoundAgent } from './types'
+import type { ProcessTable, Env } from '../system/types'
+import type { AgentId, FoundAgent } from './types'
 
 /** Each harness's executable name (the command's first word, without its folder), to the agent it starts. */
 const AGENTS_BY_EXECUTABLE = new Map(

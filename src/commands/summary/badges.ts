@@ -1,5 +1,6 @@
 import { harnessName, parseMark } from '../../agents/mark'
 import {
+    BADGE_COST_COLOR,
     BADGE_DARK,
     BADGE_STYLE,
     EFFORT_SHADE,
@@ -9,10 +10,17 @@ import {
     SHIELDS_URL,
     UNKNOWN_HARNESS_COLORS,
 } from './constants'
-import { commitsText } from './words'
+import { commitsText, costText } from './words'
 
 import type { AgentId } from '../../agents/types'
-import type { AgentColors, AgentLogos, AgentStyles, HarnessBadge, Summary } from './types'
+import type {
+    AgentColors,
+    AgentLogos,
+    AgentStyles,
+    HarnessBadge,
+    MarkCount,
+    Summary,
+} from './types'
 
 /**
  * Text as a shields.io badge path segment, where `-` and `_` are separators.
@@ -105,14 +113,17 @@ function agentLogo(agent: string, logos: AgentLogos): HarnessBadge['logo'] | und
 }
 
 /**
- * One mark's badge: the harness, the model, the effort and the commit count,
- * as pieces with nothing between them so they read as one.
- * @param mark - the trailer value
- * @param commits - how many commits carry it
+ * One mark's badge: the harness, the model, the effort, the commit count and
+ * (when known) the estimated cost, as pieces with nothing between them so
+ * they read as one.
+ * @param count - the mark, its commit count and its cost
+ * @param count.mark - the trailer value
+ * @param count.commits - how many commits carry it
+ * @param count.cost - their estimated cost, when known
  * @param styles - colors and logos given for agents modelmark doesn't know
  * @returns the HTML
  */
-function markBadge(mark: string, commits: number, styles: AgentStyles): string {
+function markBadge({ mark, commits, cost }: MarkCount, styles: AgentStyles): string {
     const { agent, model, effort } = parseMark(mark)
     const { color, effortColor } = agentColors(agent, styles.color)
 
@@ -121,6 +132,7 @@ function markBadge(mark: string, commits: number, styles: AgentStyles): string {
         piece(model, color),
         effort ? piece(effort, effortColor) : '',
         piece(commitsText(commits), BADGE_DARK),
+        cost === undefined ? '' : piece(costText(cost), BADGE_COST_COLOR),
     ].join('')
 }
 
@@ -140,7 +152,7 @@ export function summaryBadges(
         return ''
     }
 
-    const badges = summary.marks.map(({ mark, commits }) => markBadge(mark, commits, styles))
+    const badges = summary.marks.map(count => markBadge(count, styles))
 
     if (summary.unmarked > 0) {
         badges.push(

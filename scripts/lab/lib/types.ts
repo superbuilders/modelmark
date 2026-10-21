@@ -1,4 +1,5 @@
-import type { AgentId, Env, Platform, TestedVersion } from '../../../src/agents/types'
+import type { AgentId, Platform, TestedVersion } from '../../../src/agents/types'
+import type { Env } from '../../../src/system/types'
 
 /**
  * How one scenario ended: `skipped` when a host lacks what it needs, such as the harness.

@@ -3,8 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { runCommand } from '../../../src/system/command'
 import { AGENT_MARKERS } from './constants'
 
-import type { Env } from '../../../src/agents/types'
-import type { CommandOptions, CommandResult } from '../../../src/system/types'
+import type { Env, CommandOptions, CommandResult } from '../../../src/system/types'
 
 /**
  * Raised when a scenario can't run on this host, such as a missing harness.

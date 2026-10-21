@@ -1,11 +1,13 @@
 # modelmark
 
-Marks every git commit with the coding agent, model and effort level that made it.
+Marks every git commit with the coding agent, model and effort level that
+made it, and an estimate of what the agent's work behind it cost.
 
 ```
 Fix the login redirect
 
 Assisted-by: claude-code:claude-opus-5-5@high
+Assisted-cost: $1.84
 ```
 
 A pull request can then say which agents and models wrote it:
@@ -13,8 +15,8 @@ A pull request can then say which agents and models wrote it:
 ```sh
 $ modelmark summary
 origin/main..HEAD: 5 commits
-  3  claude-code:claude-opus-5-5@high
-  1  codex:gpt-5.6-terra@medium
+  3  claude-code:claude-opus-5-5@high  ~$6.20
+  1  codex:gpt-5.6-terra@medium  ~$0.85
   1  no mark
 ```
 
@@ -26,6 +28,8 @@ origin/main..HEAD: 5 commits
   never asks the model to name itself.
 - It adds an `Assisted-by` trailer. That takes about 0.2 s on Linux and 0.06 s
   on macOS, and a problem never blocks the commit.
+- It adds an `Assisted-cost` trailer: what the agent's replies since its last
+  commit would cost at list prices (see [Cost](#cost)).
 
 ## Setup
 
@@ -94,7 +98,11 @@ the dark first piece. Repeat either for more agents:
 modelmark summary --format badges --color jojo=E73A2C --logo jojo=jojo.svg
 ```
 
-`--format table` prints the same counts as a Markdown table:
+When the commits carry costs, each badge ends with their total, such as
+`~$6.20`.
+
+`--format table` prints the same counts as a Markdown table, with a Cost
+column when the commits carry costs:
 
 ```sh
 $ modelmark summary --format table
@@ -122,6 +130,30 @@ Assisted-by: claude-code:claude-opus-5-5@high
 - **Squash merges:** a squashed commit keeps each branch commit's mark in the
   middle of its message. `summary` reads mark lines anywhere in a message, so
   it counts the squash once for each mark it holds.
+
+## Cost
+
+`Assisted-cost` estimates what the agent's replies since its previous commit
+would cost at the model maker's list prices. It is not what you paid: a
+subscription or a negotiated rate costs something else.
+
+- **Which replies:** everything the session did after the last commit it
+  made, subagents included. A session's first commit counts the whole session
+  up to it. Every reply is counted once, whichever repository it ends up in.
+- **How it's priced:** each reply's tokens fall into four kinds, each with its
+  own price: fresh input, input read from the prompt cache, input written to
+  it, and output (thinking included). Most of an agent's cost is cache reads
+  and writes, so counting output alone would miss most of it. A model whose
+  price rises past a context size is charged the higher rate for the whole
+  reply.
+- **Prices:** from [models.dev](https://models.dev), copied into modelmark
+  at each release. A gateway's prefix (`anthropic-primary/claude-opus-5-5`)
+  is ignored. When a model has no price, the commit gets no cost rather than a
+  wrong one.
+- **An amend** adds its new replies to the cost already there. `summary`
+  splits a commit with two marks evenly between them.
+- **Agents modelmark doesn't know** (`MODELMARK`) get no cost, since
+  modelmark can't read their logs.
 
 ## Supported harnesses
 

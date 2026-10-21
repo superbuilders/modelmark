@@ -89,6 +89,21 @@ describe('summarize', () => {
         })
     })
 
+    test("adds up each mark's costs, splitting a commit's cost between its marks", async () => {
+        const repo = await repoWith([
+            'one\n\nAssisted-by: pi:kimi-k3\nAssisted-cost: $1.00',
+            'two\n\nAssisted-by: pi:kimi-k3\nAssisted-by: codex:gpt-5.6-terra\nAssisted-cost: $3.00',
+            'three\n\nAssisted-by: codex:gpt-5.6-terra',
+        ])
+
+        const { marks } = await summarize('base..HEAD', repo)
+
+        expect(marks).toEqual([
+            { mark: 'codex:gpt-5.6-terra', commits: 2, cost: 1.5 },
+            { mark: 'pi:kimi-k3', commits: 2, cost: 2.5 },
+        ])
+    })
+
     test('marks with the same count sort by name', async () => {
         const repo = await repoWith([
             'a\n\nAssisted-by: pi:kimi-k3',
@@ -198,6 +213,16 @@ describe('summaryCommand', () => {
 })
 
 describe('summaryTable', () => {
+    test('adds a cost column when any mark has a cost', () => {
+        const markdown = summaryTable({
+            total: 2,
+            unmarked: 1,
+            marks: [{ mark: 'pi:kimi-k3', commits: 1, cost: 0.5 }],
+        })
+
+        expect(markdown.split('\n')[2]).toBe('| Pi      | kimi-k3 |        | 1       | ~$0.50 |')
+    })
+
     test('splits each mark into harness, model and effort, with unmarked commits last', () => {
         const markdown = summaryTable({
             total: 5,

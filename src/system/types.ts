@@ -56,3 +56,8 @@ export interface HookFile {
     /** Its contents, or null when there is no hook yet. */
     text: string | null
 }
+
+/**
+ * Environment variables, as process.env holds them.
+ */
+export type Env = Record<string, string | undefined>

@@ -11,11 +11,6 @@ export type AgentId = 'claude-code' | 'codex' | 'pi'
 export type DetectionSource = 'process-tree' | 'environment' | 'declared'
 
 /**
- * Environment variables, as process.env holds them.
- */
-export type Env = Record<string, string | undefined>
-
-/**
  * The agent running this command.
  */
 export interface FoundAgent {
@@ -78,3 +73,59 @@ export interface TestedVersion {
  * The newest tested version of each harness on each platform.
  */
 export type TestedRecord = Partial<Record<Platform, Partial<Record<AgentId, TestedVersion>>>>
+
+/**
+ * The tokens one model reply used, split so no token is in two buckets, since
+ * each bucket has its own price.
+ */
+export interface TokenUse {
+    /** The model as the agent's log names it. */
+    model: string
+    /** Input the model read fresh, not from the prompt cache. */
+    input: number
+    /** Input read back from the prompt cache. */
+    cacheRead: number
+    /** Input written to the prompt cache. */
+    cacheWrite: number
+    /** Output, thinking included. */
+    output: number
+}
+
+/**
+ * The replies a session made after a point in time.
+ */
+export interface SessionUse {
+    /** The session, named the same across its commits. */
+    session: string
+    /** Each reply's tokens. */
+    uses: TokenUse[]
+    /** When the newest of them was written (ms since the epoch), or undefined when there are none. */
+    through: number | undefined
+}
+
+/**
+ * A model's prices in US dollars per million tokens.
+ */
+export interface Rates {
+    /** Fresh input. */
+    input: number
+    /** Output, thinking included. */
+    output: number
+    /** Input read from the prompt cache; input's price when the list gives none. */
+    cacheRead?: number
+    /** Input written to the prompt cache; input's price when the list gives none. */
+    cacheWrite?: number
+}
+
+/**
+ * A model's prices, with the dearer prices a reply pays once its input passes a size.
+ */
+export interface ModelPrice extends Rates {
+    /** Each tier applies to a whole reply whose input (fresh plus cached) is more than `above` tokens. */
+    tiers?: (Rates & { above: number })[]
+}
+
+/**
+ * Prices by model id, as models.dev's first-party providers list them.
+ */
+export type PriceList = Readonly<Record<string, ModelPrice>>
