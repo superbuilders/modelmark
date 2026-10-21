@@ -134,7 +134,7 @@ export async function hookCommand(
     let detection: Detection | null
 
     try {
-        detection = await detect()
+        detection = await detect(env)
         await markMessage(messageFile, detection)
     } catch (error) {
         console.error(`modelmark: commit left unmarked (${String(error)})`)

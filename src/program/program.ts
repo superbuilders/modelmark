@@ -64,18 +64,12 @@ function addLogo(value: string, previous: AgentLogos): AgentLogos {
  * @returns the option
  */
 function formatOption(description: string, formats: readonly string[]): Option {
-    return new Option('--format <format>', description)
-        .choices(formats)
-        .argParser(value => {
-            const format = value === 'table' ? 'markdown' : value
+    const option = new Option('--format <format>', description).choices(formats).default('text')
+    const choose = option.parseArg
 
-            if (!formats.includes(format)) {
-                throw new InvalidArgumentError(`Allowed choices are ${formats.join(', ')}.`)
-            }
-
-            return format
-        })
-        .default('text')
+    return option.argParser((value: string, previous: string) =>
+        choose ? choose(value === 'table' ? 'markdown' : value, previous) : value,
+    )
 }
 
 /**
