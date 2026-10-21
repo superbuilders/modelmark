@@ -6,6 +6,7 @@ import { version } from '../../package.json'
 import { doctorCommand } from '../commands/doctor/doctor'
 import { hookCommand } from '../commands/hook/hook'
 import { installCommand, uninstallCommand } from '../commands/install/install'
+import { refreshPricesCommand } from '../commands/prices/prices'
 import { HEX_COLOR, SUMMARY_FORMATS } from '../commands/summary/constants'
 import { summaryCommand } from '../commands/summary/summary'
 
@@ -119,6 +120,13 @@ export function buildProgram(): Command {
         .argument('[source]', 'the message source git passes')
         .argument('[sha]', 'the commit git passes when amending (unused)')
         .action(hookCommand)
+
+    program
+        .command('refresh-prices', { hidden: true })
+        .description(
+            'fetch the latest prices into the cache folder (the hook runs this in the background)',
+        )
+        .action(() => refreshPricesCommand())
 
     return program
 }

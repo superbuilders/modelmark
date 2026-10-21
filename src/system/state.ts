@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -14,6 +14,31 @@ import type { Env } from './types'
  */
 function stateDir(env: Env): string {
     return join(env.XDG_STATE_HOME || join(homedir(), '.local', 'state'), STATE_FOLDER)
+}
+
+/**
+ * Where a file modelmark can rebuild lives: `$XDG_CACHE_HOME/modelmark/<name>`,
+ * else `~/.cache/modelmark/<name>`.
+ * @param name - its path under the cache folder
+ * @param env - the environment
+ * @returns the file's path
+ */
+export function cachePath(name: string, env: Env): string {
+    return join(env.XDG_CACHE_HOME || join(homedir(), '.cache'), STATE_FOLDER, name)
+}
+
+/**
+ * Write a file whole, so a reader at the same moment sees the old content or
+ * the new, never half of it.
+ * @param path - the file
+ * @param value - its content
+ */
+export function writeWhole(path: string, value: string): void {
+    const draft = `${path}.${process.pid}`
+
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(draft, value)
+    renameSync(draft, path)
 }
 
 /**

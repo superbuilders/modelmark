@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
-import { costValue, messageCost, readPriceList, usesCost } from './cost'
+import { costValue, messageCost, usesCost } from './cost'
+import { readPriceList, SHIPPED_PRICES } from './prices'
 
 import type { PriceList, TokenUse } from './types'
 
@@ -87,7 +88,7 @@ test('costValue writes dollars and cents, and four places under a cent', () => {
 })
 
 test('the shipped price list has the models modelmark is tested with', () => {
-    const prices = readPriceList()
+    const prices = readPriceList(SHIPPED_PRICES)
 
     expect(prices['claude-opus-5-5']?.input).toBeGreaterThan(0)
     expect(prices['gpt-5.6-terra']?.output).toBeGreaterThan(0)

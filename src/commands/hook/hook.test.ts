@@ -104,6 +104,7 @@ describe('markMessage', () => {
 
 describe('costMessage', () => {
     const PRICES: PriceList = { 'claude-opus-5-5': { input: 4, output: 20 } }
+    const refresh = vi.fn<(unpriced: boolean) => void>()
 
     /**
      * A Claude Code session with fresh state, and a way to add replies to it.
@@ -148,10 +149,12 @@ describe('costMessage', () => {
         const second = messageFile('Two\n')
 
         reply(100_000)
-        expect(await costMessage(first, 'claude-code', env, PRICES)).toBe('Assisted-cost: $2.00')
+        expect(await costMessage(first, 'claude-code', env, PRICES, refresh)).toBe(
+            'Assisted-cost: $2.00',
+        )
 
         reply(50_000)
-        await costMessage(second, 'claude-code', env, PRICES)
+        await costMessage(second, 'claude-code', env, PRICES, refresh)
 
         expect(readFileSync(first, 'utf8')).toBe('One\n\nAssisted-cost: $2.00\n')
         expect(readFileSync(second, 'utf8')).toBe('Two\n\nAssisted-cost: $1.00\n')
@@ -162,7 +165,7 @@ describe('costMessage', () => {
         const path = messageFile('One\n\nAssisted-cost: $2.00\n')
 
         reply(50_000)
-        await costMessage(path, 'claude-code', env, PRICES)
+        await costMessage(path, 'claude-code', env, PRICES, refresh)
 
         expect(readFileSync(path, 'utf8')).toBe('One\n\nAssisted-cost: $3.00\n')
     })
@@ -172,7 +175,9 @@ describe('costMessage', () => {
         const path = messageFile('One\n')
 
         reply(100)
-        expect(await costMessage(path, 'claude-code', env, PRICES)).toBe('Assisted-cost: $0.0020')
+        expect(await costMessage(path, 'claude-code', env, PRICES, refresh)).toBe(
+            'Assisted-cost: $0.0020',
+        )
     })
 
     test('an amend with no new replies keeps its cost', async () => {
@@ -180,8 +185,8 @@ describe('costMessage', () => {
         const path = messageFile('One\n')
 
         reply(50_000)
-        await costMessage(path, 'claude-code', env, PRICES)
-        expect(await costMessage(path, 'claude-code', env, PRICES)).toBeNull()
+        await costMessage(path, 'claude-code', env, PRICES, refresh)
+        expect(await costMessage(path, 'claude-code', env, PRICES, refresh)).toBeNull()
         expect(readFileSync(path, 'utf8')).toBe('One\n\nAssisted-cost: $1.00\n')
     })
 
@@ -190,8 +195,10 @@ describe('costMessage', () => {
         const path = messageFile('One\n')
 
         reply(100_000)
-        expect(await costMessage(path, 'claude-code', env, {})).toBeNull()
-        expect(await costMessage(path, 'claude-code', env, PRICES)).toBeNull()
+        expect(await costMessage(path, 'claude-code', env, {}, refresh)).toBeNull()
+        expect(refresh).toHaveBeenLastCalledWith(true)
+        expect(await costMessage(path, 'claude-code', env, PRICES, refresh)).toBeNull()
+        expect(refresh).toHaveBeenLastCalledWith(false)
         expect(readFileSync(path, 'utf8')).toBe('One\n')
     })
 })

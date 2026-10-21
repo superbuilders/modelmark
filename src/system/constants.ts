@@ -26,5 +26,5 @@ export const HOOK_LINES: Readonly<Record<HookStyle, string>> = {
     dependency: `if [ -x ${LOCAL_BIN} ]; then ${LOCAL_BIN} hook "$@" || true; fi`,
 }
 
-/** modelmark's folder under the user's state folder. */
+/** modelmark's folder under the user's state and cache folders. */
 export const STATE_FOLDER = 'modelmark'

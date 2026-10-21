@@ -1,29 +1,10 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-
 import { readState, writeState } from '../system/state'
-import { PRICES_FILE } from './constants'
 import { sessionName } from './logs'
 import { COST_LINE } from './patterns'
 import { readSessionUse } from './usage'
 
 import type { Env } from '../system/types'
 import type { AgentId, ModelPrice, PriceList, SessionUse, TokenUse } from './types'
-
-/**
- * Read the price list modelmark ships.
- * @param path - the list (default: the one beside modelmark's source)
- * @returns the prices, or none when the list can't be read
- */
-export function readPriceList(
-    path = fileURLToPath(new URL(`../../${PRICES_FILE}`, import.meta.url)),
-): PriceList {
-    try {
-        return JSON.parse(readFileSync(path, 'utf8')) as PriceList
-    } catch {
-        return {}
-    }
-}
 
 /**
  * A model's prices. A gateway names a model with its own prefix

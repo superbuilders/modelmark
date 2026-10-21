@@ -1,16 +1,19 @@
+import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
-import { COST_TRAILER_KEY } from '../../agents/constants'
+import { COST_TRAILER_KEY, PRICE_REFRESH_STATE } from '../../agents/constants'
 import {
     costValue,
     markCounted,
     messageCost,
-    readPriceList,
     usesCost,
     usesSinceLastCommit,
 } from '../../agents/cost'
 import { detect, markTrailer } from '../../agents/mark'
+import { loadPriceList, priceRefreshDue } from '../../agents/prices'
 import { git } from '../../system/command'
+import { writeState } from '../../system/state'
 import { SKIPPED_SOURCES } from './constants'
 
 import type { AgentId, Detection, PriceList } from '../../agents/types'
@@ -49,21 +52,43 @@ export async function markMessage(
 }
 
 /**
+ * Start a price refresh in the background when one is due, and note that it
+ * started, so the next commits don't start another. The commit doesn't wait.
+ * @param unpriced - whether this commit used a model without a price
+ * @param env - the environment
+ */
+function refreshPricesIfDue(unpriced: boolean, env: Env = process.env): void {
+    if (!priceRefreshDue(env, unpriced)) {
+        return
+    }
+
+    writeState(PRICE_REFRESH_STATE, String(Date.now()), env)
+    spawn(
+        process.execPath,
+        [fileURLToPath(new URL('../../cli.ts', import.meta.url)), 'refresh-prices'],
+        { detached: true, stdio: 'ignore', env },
+    ).unref()
+}
+
+/**
  * Add the estimated cost of the agent's replies since its last commit to a
  * commit message file. An amend adds the new replies to the cost already
  * there. The replies count as used even when their models have no price, so
- * no later commit counts them again.
+ * no later commit counts them again. Then the prices are refreshed in the
+ * background when they are due.
  * @param messageFile - the message file git passes to prepare-commit-msg
  * @param agent - the agent making the commit
  * @param env - the environment (default: this process's)
- * @param prices - the price list (default: the one modelmark ships)
+ * @param prices - the price list (default: the shipped one, updated from the cache)
+ * @param refresh - starts a price refresh if one is due, told whether a model lacked a price
  * @returns the trailer written, or null when the commit gets none
  */
 export async function costMessage(
     messageFile: string,
     agent: AgentId,
     env: Env = process.env,
-    prices: PriceList = readPriceList(),
+    prices: PriceList = loadPriceList(env),
+    refresh: (unpriced: boolean) => void = unpriced => refreshPricesIfDue(unpriced, env),
 ): Promise<string | null> {
     const use = usesSinceLastCommit(agent, env)
 
@@ -94,6 +119,7 @@ export async function costMessage(
     }
 
     markCounted(agent, use, env)
+    refresh(use.uses.length > 0 && usd === null)
 
     return trailer
 }
