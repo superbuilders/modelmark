@@ -1,6 +1,6 @@
 {
     "name": "modelmark",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "description": "Marks each git commit with the coding agent, model and effort level that made it, and what its work cost",
     "keywords": [
         "git",
