@@ -37,6 +37,11 @@ to run one exact `git commit` (cheapest models, one-line prompts), then checks:
 - every hook run took at most 500 ms, Bun's startup included;
 - the hook printed nothing (a warning means a commit went unmarked).
 
+The `-elsewhere` and `-hidden` scenarios start the agent in a second
+repository. In `-elsewhere` it commits here with `cd`, so the commit pays for
+that reply; in `-hidden` a script commits for it, so nothing the agent did
+names this repository and the commit gets no cost line.
+
 Two scenarios need no model: `leaked-env` commits with an agent's variables set
 but no agent above it in the process tree (expecting no mark), and `big-log`
 reads and prices a 300 MB session log. They start the commit in a backgrounded subshell

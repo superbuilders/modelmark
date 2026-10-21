@@ -119,9 +119,12 @@ describe('costMessage', () => {
 
     /**
      * A Claude Code session with fresh state, and a way to add replies to it.
-     * @returns its environment and a function that appends a reply
+     * @returns its environment and a function that appends a reply, made in a folder when given
      */
-    function session(): { env: Record<string, string>; reply: (output: number) => void } {
+    function session(): {
+        env: Record<string, string>
+        reply: (output: number, cwd?: string) => void
+    } {
         const root = mkdtempSync(join(tmpdir(), 'modelmark-cost-'))
         const log = join(root, 'config', 'projects', '-repo', 's1.jsonl')
         let replies = 0
@@ -135,13 +138,14 @@ describe('costMessage', () => {
                 CLAUDE_CONFIG_DIR: join(root, 'config'),
                 XDG_STATE_HOME: join(root, 'state'),
             },
-            reply: output => {
+            reply: (output, cwd) => {
                 replies++
                 writeFileSync(
                     log,
                     `${JSON.stringify({
                         type: 'assistant',
                         timestamp: new Date(Date.UTC(2026, 9, 20, 10, replies)).toISOString(),
+                        cwd,
                         message: {
                             id: `m${replies}`,
                             model: 'claude-opus-5-5',
@@ -186,20 +190,21 @@ describe('costMessage', () => {
             })
         }
 
+        vi.spyOn(process, 'cwd').mockReturnValue(repo)
         git('init', '-q')
         git('commit', '-q', '--allow-empty', '-m', 'Start')
 
-        reply(100_000)
+        reply(100_000, repo)
         writeFileSync(message, `One\n\n${mark}\n`)
         await costMessage(message, OPUS, env, PRICES, refresh)
 
-        reply(50_000)
+        reply(50_000, repo)
         writeFileSync(message, `One\n\n${mark}\n`)
         await costMessage(message, OPUS, env, PRICES, refresh)
         expect(readFileSync(message, 'utf8')).toBe(`One\n\n${mark}\nAssisted-cost: $3.00\n`)
 
         git('commit', '-q', '--allow-empty', '-F', message)
-        reply(10_000)
+        reply(10_000, repo)
         writeFileSync(message, `Two\n\n${mark}\n`)
         await costMessage(message, OPUS, env, PRICES, refresh)
         expect(readFileSync(message, 'utf8')).toBe(`Two\n\n${mark}\nAssisted-cost: $0.20\n`)

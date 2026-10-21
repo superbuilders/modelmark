@@ -28,7 +28,7 @@ export interface Scenario {
     harnesses: AgentId[]
     /** The trailers the newest commit must carry, in order. */
     expected: ExpectedMark[]
-    /** False when the commit has no log to price, so it must carry no cost line. */
+    /** False when the commit must carry no cost line: there is no log to price, or nothing the agent did names this repository. */
     priced?: false
     /** Makes the commit (or commits) in the workspace. */
     run: (workspace: ScenarioWorkspace) => Promise<void>
@@ -42,15 +42,18 @@ export interface ScenarioWorkspace {
     root: string
     /** The scratch repository, with the modelmark hook installed. */
     repo: string
+    /** A second repository, without the hook, for agents that start elsewhere. */
+    elsewhere: string
     /** The Bun binary running the lab. */
     bun: string
 
     /**
-     * Run an agent's command in the repository and keep its output for failure reports.
+     * Run an agent's command and keep its output for failure reports.
      * @param argv - the command
+     * @param cwd - the folder it starts in (default: the repository)
      * @returns its output
      */
-    agent: (argv: string[]) => Promise<string>
+    agent: (argv: string[], cwd?: string) => Promise<string>
 
     /**
      * Run a command with no agent above it in the process tree.

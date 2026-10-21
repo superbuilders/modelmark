@@ -165,9 +165,20 @@ Each reply is priced on its own from models.dev's first-party prices
 `$XDG_CACHE_HOME/modelmark/prices.json` over it. After costing, the hook
 may start the hidden `refresh-prices` command detached (README, "Fresh
 prices"); the commit never waits on the network. A model without a price makes the commit's cost unknown, never
-$0. After each commit the hook saves the newest counted reply's time under
-`$XDG_STATE_HOME/modelmark/checkpoints/`, and the next commit counts only
-replies after it. An amend adds to the cost already in the message.
+$0.
+
+A commit pays only for replies that worked in its repository
+(`workedIn` in `agents/usage.ts`). The absolute paths a reply's tool calls
+name decide when any of them is in a repository (`system/repos.ts`, nearest
+`.git` with symlinks resolved); otherwise its working folder does: Claude
+Code's record `cwd`, Codex's turn `cwd` or a shell call's `workdir`, Pi's
+session header. A session that never worked here gives the commit no cost.
+After each commit the hook saves the newest counted reply's time under
+`$XDG_STATE_HOME/modelmark/checkpoints/`, one file per session and
+repository, and the next commit there counts only replies after it. The
+checkpoint stays pending until the next run sees the commit was made. An amend
+adds to the cost already in the message. `agents/checkpoints.test.ts` plays
+each multi-repository scenario through all three log formats.
 
 The hook never fails a commit. Merge commits get no trailer.
 

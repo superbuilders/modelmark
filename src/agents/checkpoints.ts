@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { dirname } from 'node:path'
 
 import { runCommand } from '../system/command'
@@ -9,13 +10,20 @@ import type { Env } from '../system/types'
 import type { AgentId, Checkpoint, CommitAttempt, SessionUse } from './types'
 
 /**
- * The name a session's checkpoint is kept under.
+ * The name a session's checkpoint in one repository is kept under. A session
+ * that commits in several repositories keeps one count in each, so a commit
+ * in one never skips work done for another.
  * @param agent - which agent
  * @param session - its session
+ * @param root - the repository's working folder, or undefined for the whole session
  * @returns the state file's name
  */
-function checkpointName(agent: AgentId, session: string): string {
-    return `checkpoints/${agent}-${encodeURIComponent(session)}`
+function checkpointName(agent: AgentId, session: string, root: string | undefined): string {
+    const name = `checkpoints/${agent}-${encodeURIComponent(session)}`
+
+    return root === undefined
+        ? name
+        : `${name}-${createHash('sha256').update(root).digest('hex').slice(0, 16)}`
 }
 
 /**
@@ -62,14 +70,27 @@ async function committed(attempt: CommitAttempt): Promise<boolean> {
 }
 
 /**
- * The point a session was counted up to: the last commit's, once that commit
- * is known to be made.
- * @param name - the state file's name
+ * The point a session was counted up to in a repository: the last commit's
+ * there, once that commit is known to be made. A session whose count an older
+ * modelmark kept for the whole session starts from that count.
+ * @param agent - which agent
+ * @param session - its session
+ * @param root - the repository's working folder, or undefined for the whole session
  * @param env - the environment
  * @returns the time (ms since the epoch), or undefined to count the whole session
  */
-async function countedThrough(name: string, env: Env): Promise<number | undefined> {
-    const { through, pending } = readCheckpoint(name, env)
+async function countedThrough(
+    agent: AgentId,
+    session: string,
+    root: string | undefined,
+    env: Env,
+): Promise<number | undefined> {
+    const name = checkpointName(agent, session, root)
+    const checkpoint = readCheckpoint(name, env)
+    const { through, pending } =
+        checkpoint.through === undefined && !checkpoint.pending
+            ? readCheckpoint(checkpointName(agent, session, undefined), env)
+            : checkpoint
 
     if (!pending) {
         return through
@@ -83,15 +104,18 @@ async function countedThrough(name: string, env: Env): Promise<number | undefine
 }
 
 /**
- * The replies an agent's session made since its last commit: since the point
- * the last commit's cost was counted up to, or since the session started.
+ * The replies an agent's session made in a repository since its last commit
+ * there: since the point that commit's cost was counted up to, or since the
+ * session started.
  * @param agent - which agent
  * @param env - the environment
+ * @param root - the repository's working folder, or undefined to count the whole session
  * @returns the replies, or undefined when the session's logs can't be read
  */
 export async function usesSinceLastCommit(
     agent: AgentId,
     env: Env,
+    root: string | undefined,
 ): Promise<SessionUse | undefined> {
     const session = sessionName(agent, env)
 
@@ -99,20 +123,16 @@ export async function usesSinceLastCommit(
         return undefined
     }
 
-    const use = readSessionUse(
-        agent,
-        env,
-        await countedThrough(checkpointName(agent, session), env),
-    )
+    const use = readSessionUse(agent, env, await countedThrough(agent, session, root, env), root)
 
-    return use && { session, ...use }
+    return use && { session, root, ...use }
 }
 
 /**
  * The commit a hook run is pricing, as its repository stands before it is made.
  * @param messageFile - the message file git passes, inside the repository's git folder
  * @param mark - the mark the commit carries
- * @returns the attempt, or undefined outside a repository
+ * @returns the attempt, or undefined outside a repository's working folder
  */
 export async function commitAttempt(
     messageFile: string,
@@ -136,7 +156,14 @@ export async function commitAttempt(
         'HEAD',
     ])
 
-    return { gitDir: dir, head: head.stdout.trim(), mark }
+    /*
+     * Git runs the hook at the top of the working folder.
+     */
+    const root = await runCommand(['git', 'rev-parse', '--show-toplevel'], { cwd: process.cwd() })
+
+    return root.exitCode === 0
+        ? { gitDir: dir, head: head.stdout.trim(), mark, root: root.stdout.trim() }
+        : undefined
 }
 
 /**
@@ -157,7 +184,7 @@ export function markCounted(
         return
     }
 
-    const name = checkpointName(agent, use.session)
+    const name = checkpointName(agent, use.session, use.root)
     const checkpoint: Checkpoint = attempt
         ? { through: readCheckpoint(name, env).through, pending: { through: use.through, attempt } }
         : { through: use.through }

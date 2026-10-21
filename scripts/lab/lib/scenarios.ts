@@ -1,11 +1,76 @@
 import { chmod, mkdir, open, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
+import { HARNESS_NAMES } from '../../../src/agents/constants'
 import { BIG_LOG_BYTES, COMMIT_MESSAGE, MODELS } from './constants'
 import { AMEND, claude, codex, codexThread, COMMIT, HELLO, pi, runPrompt } from './harnesses'
 import { shellQuote, SkipError } from './process'
 
+import type { AgentId } from '../../../src/agents/types'
 import type { Scenario, ScenarioWorkspace } from './types'
+
+/**
+ * Each harness's command for one prompt, at the lab's cheapest settings.
+ * @param workspace - the scenario's folders, for Pi's session folder
+ * @returns a command per harness
+ */
+function cheapest(workspace: ScenarioWorkspace): Record<AgentId, (prompt: string) => string[]> {
+    return {
+        'claude-code': prompt => claude(prompt, { model: MODELS.claudeCode, effort: 'low' }),
+        codex: prompt => codex(prompt, { model: MODELS.codex, effort: 'low' }),
+        pi: prompt =>
+            pi(prompt, {
+                model: MODELS.pi,
+                effort: 'low',
+                sessions: join(workspace.root, 'pi-sessions'),
+            }),
+    }
+}
+
+/**
+ * The two scenarios for an agent that works in another repository: one where
+ * it commits here by naming this repository, so the commit pays for that
+ * work, and one where a script commits for it, so nothing it did names this
+ * repository and the commit pays for nothing.
+ * @param agent - the harness
+ * @returns the scenarios
+ */
+function elsewhereScenarios(agent: AgentId): Scenario[] {
+    const expected = { 'claude-code': MODELS.claudeCode, codex: MODELS.codex, pi: MODELS.pi }[agent]
+
+    return [
+        {
+            name: `${agent}-elsewhere`,
+            description: `${HARNESS_NAMES[agent]} works in another repository and commits here with cd; the commit pays for that`,
+            harnesses: [agent],
+            expected: [`${agent}:${expected}@low`],
+            run: async workspace => {
+                await workspace.agent(
+                    cheapest(workspace)[agent](
+                        runPrompt(`cd ${shellQuote(workspace.repo)} && ${COMMIT}`),
+                    ),
+                    workspace.elsewhere,
+                )
+            },
+        },
+        {
+            name: `${agent}-hidden`,
+            description: `${HARNESS_NAMES[agent]} works in another repository and a script commits here; no cost line`,
+            harnesses: [agent],
+            expected: [`${agent}:${expected}@low`],
+            priced: false,
+            run: async workspace => {
+                const script = join(workspace.root, 'commit.sh')
+
+                await writeFile(script, `cd ${shellQuote(workspace.repo)} && ${COMMIT}\n`)
+                await workspace.agent(
+                    cheapest(workspace)[agent](runPrompt(`sh ${shellQuote(script)}`)),
+                    workspace.elsewhere,
+                )
+            },
+        },
+    ]
+}
 
 /** Every lab scenario, in the order `lab list` shows them. */
 export const SCENARIOS: readonly Scenario[] = [
@@ -188,6 +253,9 @@ export const SCENARIOS: readonly Scenario[] = [
             )
         },
     },
+    ...elsewhereScenarios('claude-code'),
+    ...elsewhereScenarios('codex'),
+    ...elsewhereScenarios('pi'),
     {
         name: 'leaked-env',
         description:
@@ -209,7 +277,7 @@ export const SCENARIOS: readonly Scenario[] = [
         run: async workspace => {
             const config = join(workspace.root, 'claude-config')
 
-            await writeBigLog(join(config, 'projects', '-lab', 'lab-big.jsonl'))
+            await writeBigLog(join(config, 'projects', '-lab', 'lab-big.jsonl'), workspace.repo)
             await workspace.detached(
                 [
                     await standInClaude(workspace),
@@ -228,13 +296,15 @@ export const SCENARIOS: readonly Scenario[] = [
 /**
  * Write a Claude Code session log of BIG_LOG_BYTES whose last record is a reply.
  * @param path - the log file
+ * @param cwd - the folder the reply was made in
  */
-async function writeBigLog(path: string): Promise<void> {
+async function writeBigLog(path: string, cwd: string): Promise<void> {
     const line = `${JSON.stringify({ type: 'user', message: { role: 'user', content: 'x'.repeat(1000) } })}\n`
     const chunk = Buffer.from(line.repeat(Math.ceil((1024 * 1024) / line.length)))
     const reply = {
         type: 'assistant',
         effort: 'high',
+        cwd,
         message: { model: 'claude-opus-5-5', usage: { input_tokens: 1000, output_tokens: 100 } },
     }
 

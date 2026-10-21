@@ -68,6 +68,16 @@ export interface TestedVersion {
 export type TestedRecord = Partial<Record<Platform, Partial<Record<AgentId, TestedVersion>>>>
 
 /**
+ * Where one reply worked, to tell which repository it belongs to.
+ */
+export interface ReplyPlace {
+    /** The folder the agent was in, when its log says. */
+    cwd: string | undefined
+    /** The reply's tool calls, each as text that may name paths. */
+    tools: string[]
+}
+
+/**
  * The replies an agent's logs hold after a point in time.
  */
 export interface LoggedUse {
@@ -83,6 +93,8 @@ export interface LoggedUse {
 export interface SessionUse extends LoggedUse {
     /** The session, named the same across its commits. */
     session: string
+    /** The repository the replies were counted for, or undefined for the whole session. */
+    root: string | undefined
 }
 
 /**
@@ -95,6 +107,8 @@ export interface CommitAttempt {
     head: string
     /** The mark line the commit carries, to know it again. */
     mark: string
+    /** The repository's working folder, absolute. */
+    root: string
 }
 
 /**

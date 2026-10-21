@@ -49,3 +49,10 @@ export const USAGE_KEYS: readonly string[] = ['"usage"']
 
 /** Text the Codex records the cost needs hold: a turn's model, and a reply's token counts. */
 export const CODEX_KEYS: readonly string[] = ['"turn_context"', '"token_usage_record"']
+
+/** The Codex `response_item` types that call a tool, quoted as they appear in a log line. */
+export const CODEX_TOOL_CALLS: readonly string[] = [
+    '"function_call"',
+    '"custom_tool_call"',
+    '"local_shell_call"',
+]

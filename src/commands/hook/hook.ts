@@ -64,8 +64,8 @@ function refreshPricesIfDue(env: Env = process.env): void {
 }
 
 /**
- * Add the estimated cost of the agent's replies since its last commit to a
- * commit message file. An amend adds the new replies to the cost already
+ * Add the estimated cost of the agent's replies in this repository since its
+ * last commit here to a commit message file. An amend adds the new replies to the cost already
  * there. The replies count as used even when their models have no price, so
  * no later commit counts them again. Then the prices are refreshed in the
  * background when they are due.
@@ -84,7 +84,8 @@ export async function costMessage(
     refresh: () => void = () => refreshPricesIfDue(env),
 ): Promise<string | null> {
     const { agent } = detection
-    const use = await usesSinceLastCommit(agent, env)
+    const attempt = await commitAttempt(messageFile, markTrailer(detection))
+    const use = await usesSinceLastCommit(agent, env, attempt?.root)
 
     if (!use) {
         return null
@@ -104,7 +105,7 @@ export async function costMessage(
         await writeTrailer(messageFile, trailer, 'replace')
     }
 
-    markCounted(agent, use, await commitAttempt(messageFile, markTrailer(detection)), env)
+    markCounted(agent, use, attempt, env)
     refresh()
 
     return trailer

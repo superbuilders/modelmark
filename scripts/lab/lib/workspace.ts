@@ -87,6 +87,8 @@ export class Workspace implements ScenarioWorkspace {
     readonly bun: string
     /** The scratch repository. */
     readonly repo: string
+    /** A second repository, without the hook, for agents that work elsewhere. */
+    readonly elsewhere: string
     /** Where everything the scenario runs writes its output. */
     private readonly log: string
     /** How many detached commands have run, to name each one's status file. */
@@ -100,6 +102,7 @@ export class Workspace implements ScenarioWorkspace {
         this.root = root
         this.bun = bun
         this.repo = join(root, 'repo')
+        this.elsewhere = join(root, 'elsewhere')
         this.log = join(root, 'output.log')
     }
 
@@ -120,6 +123,9 @@ export class Workspace implements ScenarioWorkspace {
         })
         await spawn(['git', 'config', 'commit.gpgsign', 'false'], { cwd: workspace.repo })
 
+        await mkdir(workspace.elsewhere, { recursive: true })
+        await spawn(['git', 'init', '-q', '-b', 'main'], { cwd: workspace.elsewhere })
+
         const hook = join(workspace.repo, '.git', 'hooks', 'prepare-commit-msg')
 
         await writeFile(hook, hookScript(workspace.bun, checkout))
@@ -129,12 +135,13 @@ export class Workspace implements ScenarioWorkspace {
     }
 
     /**
-     * Run an agent's command in the repository.
+     * Run an agent's command in the repository, or in another folder.
      * @param argv - the command
+     * @param cwd - the folder it starts in
      * @returns its output
      */
-    async agent(argv: string[]): Promise<string> {
-        const result = await spawn(argv, { cwd: this.repo, timeoutMs: AGENT_TIMEOUT_MS })
+    async agent(argv: string[], cwd = this.repo): Promise<string> {
+        const result = await spawn(argv, { cwd, timeoutMs: AGENT_TIMEOUT_MS })
         const output = `${result.stdout}${result.stderr}`
 
         await appendFile(this.log, `$ ${argv[0]}\n${output}\n`)

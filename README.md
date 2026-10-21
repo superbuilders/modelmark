@@ -77,10 +77,15 @@ Assisted-by: claude-code:claude-opus-5-5@high
 
 ## Cost
 
-`Assisted-cost` prices the agent's replies since its last commit, at the model
-maker's list prices from [models.dev](https://models.dev). It's an estimate,
-not your bill: a subscription costs something else.
+`Assisted-cost` prices the agent's replies in this repository since its last
+commit here, at the model maker's list prices from
+[models.dev](https://models.dev). It's an estimate, not your bill: a
+subscription costs something else.
 
+- A reply belongs to the repository its tool calls name (a file it edited, a
+  `cd` into it), or else to the folder the agent was in. One session working
+  in two repositories pays in each for its own work there.
+- A commit by a session that never worked in this repository gets no cost.
 - Every token is priced at its own rate: fresh input, cache reads, cache
   writes and output.
 - A model with no price gets no cost, never a wrong one.
