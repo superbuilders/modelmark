@@ -39,6 +39,7 @@ const HEALTHY: DoctorFacts = {
     wanted: 'path',
     localBin: false,
     detection: { agent: 'pi', via: 'process-tree', model: 'kimi-k3', effort: 'high' },
+    disabled: false,
     platform: 'linux',
     versions: { 'claude-code': null, codex: null, pi: '0.85.1' },
     tested: { linux: { pi: { version: '0.85.1', date: '2026-10-18' } } },
@@ -75,7 +76,7 @@ describe('doctorChecks', () => {
             {
                 level: 'fail',
                 text: 'modelmark isn’t on PATH, so the hook does nothing',
-                fix: 'run bun link in the modelmark checkout',
+                fix: 'run bun add -g modelmark, or add Bun’s bin folder to the PATH git uses',
             },
             {
                 level: 'fail',
@@ -85,13 +86,31 @@ describe('doctorChecks', () => {
         ])
     })
 
-    test('only notes a missing repository or agent', () => {
+    test('fails outside a repository, and only notes a missing agent', () => {
         const checks = doctorChecks({ ...HEALTHY, hook: null, detection: null })
 
         expect(checks.slice(1, 3)).toEqual([
-            { level: 'info', text: 'Not in a git repository, so there is no hook to check' },
+            {
+                level: 'fail',
+                text: 'Not in a git repository, so there is no hook to check',
+                fix: 'run modelmark doctor inside the repository',
+            },
             { level: 'info', text: 'No agent is running this, so a commit here gets no mark' },
         ])
+    })
+
+    test('promises a mark only once the hook works', () => {
+        expect(doctorChecks({ ...HEALTHY, hook: null })[3]).toEqual({
+            level: 'ok',
+            text: 'Once the hook works, a commit here gets Assisted-by: pi:kimi-k3@high',
+        })
+    })
+
+    test('says when MODELMARK_DISABLE turns marking off', () => {
+        expect(doctorChecks({ ...HEALTHY, disabled: true })[2]).toEqual({
+            level: 'warn',
+            text: 'MODELMARK_DISABLE is set, so a commit here gets no mark',
+        })
     })
 
     test('warns when the model could not be read, and names the environment fallback', () => {
@@ -108,7 +127,7 @@ describe('doctorChecks', () => {
             {
                 level: 'warn',
                 text: 'Its model couldn’t be read, so a commit here gets Assisted-by: codex:unknown',
-                fix: 'check that this harness version passed the lab',
+                fix: 'update modelmark, since this harness may have changed where it writes the model',
             },
         ])
     })
@@ -125,12 +144,12 @@ describe('doctorChecks', () => {
             {
                 level: 'warn',
                 text: 'Claude Code 2.1.400 hasn’t been tested on macOS, so its marks may be wrong',
-                fix: 'run bun scripts/lab run --all in the modelmark checkout',
+                fix: 'update modelmark, which lists the versions it was tested with',
             },
             {
                 level: 'warn',
                 text: 'Pi 0.85.1 hasn’t been tested on macOS (the newest tested is 0.84.3), so its marks may be wrong',
-                fix: 'run bun scripts/lab run --all in the modelmark checkout',
+                fix: 'update modelmark, which lists the versions it was tested with',
             },
         ])
     })
@@ -179,8 +198,9 @@ describe('doctorCommand', () => {
 
         expect(log.mock.calls.map(([line]) => line)).toEqual([
             '✖ modelmark isn’t on PATH, so the hook does nothing',
-            '  fix: run bun link in the modelmark checkout',
-            '– Not in a git repository, so there is no hook to check',
+            '  fix: run bun add -g modelmark, or add Bun’s bin folder to the PATH git uses',
+            '✖ Not in a git repository, so there is no hook to check',
+            '  fix: run modelmark doctor inside the repository',
             '– No agent is running this, so a commit here gets no mark',
         ])
         expect(process.exitCode).toBe(1)

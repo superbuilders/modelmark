@@ -134,14 +134,17 @@ describe('the commands', () => {
         await enterRepo('.husky/_')
 
         const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+        const warn = vi.spyOn(console, 'error').mockImplementation(() => {})
 
         vi.spyOn(Bun, 'which').mockReturnValue(null)
         await installCommand()
 
         expect(log.mock.calls.map(([line]) => line)).toEqual([
             'Installed the hook in .husky/prepare-commit-msg',
+        ])
+        expect(warn.mock.calls.map(([line]) => line)).toEqual([
             'This repository uses Husky, so commit that file to mark everyone’s commits',
-            'modelmark isn’t on PATH yet, so the hook does nothing; run bun link in the modelmark checkout',
+            'modelmark isn’t on PATH yet, so the hook does nothing; run bun add -g modelmark',
             expect.stringContaining('models.dev'),
         ])
     })
@@ -150,6 +153,7 @@ describe('the commands', () => {
         await enterRepo()
 
         const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+        const warn = vi.spyOn(console, 'error').mockImplementation(() => {})
 
         vi.spyOn(Bun, 'which').mockReturnValue('/bin/modelmark')
         await installCommand()
@@ -157,8 +161,11 @@ describe('the commands', () => {
 
         expect(log.mock.calls.map(([line]) => line)).toEqual([
             'Installed the hook in .git/hooks/prepare-commit-msg',
-            expect.stringContaining('models.dev'),
             'Already installed in .git/hooks/prepare-commit-msg',
+        ])
+        expect(warn.mock.calls.map(([line]) => line)).toEqual([
+            expect.stringContaining('this checkout only'),
+            expect.stringContaining('models.dev'),
         ])
     })
 
@@ -198,12 +205,13 @@ describe('a repository that lists modelmark as a dependency', () => {
 
         writeFileSync(join(repo, 'package.json'), '{"devDependencies":{"modelmark":"^0.1.0"}}')
 
-        const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+        const warn = vi.spyOn(console, 'error').mockImplementation(() => {})
 
+        vi.spyOn(console, 'log').mockImplementation(() => {})
         await installCommand()
 
-        expect(log.mock.calls.map(([line]) => line)).toEqual([
-            'Installed the hook in .git/hooks/prepare-commit-msg',
+        expect(warn.mock.calls.map(([line]) => line)).toEqual([
+            expect.stringContaining('this checkout only'),
             'modelmark isn’t in node_modules yet, so the hook does nothing until bun install runs',
             expect.stringContaining('models.dev'),
         ])
@@ -216,12 +224,13 @@ describe('a repository that lists modelmark as a dependency', () => {
         mkdirSync(join(repo, 'node_modules', '.bin'), { recursive: true })
         writeFileSync(join(repo, 'node_modules', '.bin', 'modelmark'), '')
 
-        const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+        const warn = vi.spyOn(console, 'error').mockImplementation(() => {})
 
+        vi.spyOn(console, 'log').mockImplementation(() => {})
         await installCommand()
 
-        expect(log.mock.calls.map(([line]) => line)).toEqual([
-            'Installed the hook in .git/hooks/prepare-commit-msg',
+        expect(warn.mock.calls.map(([line]) => line)).toEqual([
+            expect.stringContaining('this checkout only'),
             expect.stringContaining('models.dev'),
         ])
     })

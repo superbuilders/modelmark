@@ -1,5 +1,5 @@
 /** The ways `prices` can print. */
-export const PRICE_FORMATS = ['text', 'json', 'table'] as const
+export const PRICE_FORMATS = ['text', 'json', 'markdown'] as const
 
 /** The table's columns. */
 export const PRICE_HEADER = ['Model', 'Context', 'Input', 'Output', 'Cache read', 'Cache write']

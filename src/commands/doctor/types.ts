@@ -32,6 +32,8 @@ export interface DoctorFacts {
     localBin: boolean
     /** The agent running the doctor, or null when none is. */
     detection: Detection | null
+    /** Whether `MODELMARK_DISABLE` turns modelmark off here. */
+    disabled: boolean
     /** This machine's platform. */
     platform: Platform
     /** Each harness's installed version; a missing harness is null. */

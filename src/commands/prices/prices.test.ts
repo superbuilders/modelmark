@@ -125,7 +125,7 @@ describe('prices', () => {
         await commit('Two\n\nAssisted-by: pi:gateway/zz-plain-1\nAssisted-by: jojo:mystery-9')
         await commit('Three\n\nAssisted-by: pi:unknown\nAssisted-by: pi:zz-plain-1')
 
-        const output = await printed(undefined, { format: 'table' }, cached(), repo)
+        const output = await printed(undefined, { format: 'markdown' }, cached(), repo)
 
         expect(output.split('\n').map(line => line.split('|')[1]?.trim())).toEqual([
             'Model',
@@ -141,8 +141,30 @@ describe('prices', () => {
     test('says how to see prices when no commit is marked', async () => {
         const repo = mkdtempSync(join(tmpdir(), 'modelmark-prices-repo-'))
 
+        await git(['init', '-q'], repo)
         expect(await printed(undefined, {}, cached(), repo)).toMatch(
             /^No commits here carry a mark yet/,
+        )
+    })
+
+    test('fails outside a repository unless given a model or --all', async () => {
+        const folder = mkdtempSync(join(tmpdir(), 'modelmark-prices-folder-'))
+
+        await expect(printed(undefined, {}, cached(), folder)).rejects.toThrow(
+            /^Not in a git repository/,
+        )
+        expect(await printed('zz-plain', {}, cached(), folder)).toContain('zz-plain-1')
+    })
+
+    test('refuses a model and --all together', async () => {
+        await expect(printed('zz', { all: true }, cached())).rejects.toThrow(
+            'Name a model or pass --all, not both',
+        )
+    })
+
+    test('Markdown stays a table when nothing matches', async () => {
+        expect(await printed('no-such-model', { format: 'markdown' }, cached())).toMatch(
+            /^\| Model +\| Context/,
         )
     })
 

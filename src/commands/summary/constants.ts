@@ -14,7 +14,7 @@ export const NO_MARK = 'no mark'
 export const NO_MARK_ROW = 'No mark'
 
 /** The ways `summary` can print. */
-export const SUMMARY_FORMATS = ['text', 'json', 'table', 'badges'] as const
+export const SUMMARY_FORMATS = ['text', 'json', 'markdown', 'badges'] as const
 
 /** Where badges are drawn. */
 export const SHIELDS_URL = 'https://img.shields.io/badge/'
@@ -28,7 +28,7 @@ export const BADGE_DARK = '30363D'
 /** How much of each channel an effort piece keeps of its model piece's color, for an agent given a color. */
 export const EFFORT_SHADE = 0.75
 
-/** A badge color as `--color` takes it: six hex digits, without the `#`. */
+/** A badge color as `--badge-color` takes it: six hex digits, without the `#`. */
 export const HEX_COLOR = /^[\da-f]{6}$/i
 
 /** The model and effort colors of a harness modelmark doesn't know and wasn't given a color for. */

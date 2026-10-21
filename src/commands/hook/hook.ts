@@ -6,6 +6,7 @@ import { commitAttempt, markCounted, usesSinceLastCommit } from '../../agents/ch
 import { detect } from '../../agents/detect'
 import { usesCost } from '../../pricing/cost'
 import { claimPriceRefresh, loadPriceList } from '../../pricing/prices'
+import { hookDisabled } from '../../setup/hooks'
 import { costTrailer } from '../../trailers/cost'
 import { markTrailer } from '../../trailers/mark'
 import { messageCost, writeTrailer } from '../../trailers/message'
@@ -112,14 +113,21 @@ export async function costMessage(
 }
 
 /**
- * The prepare-commit-msg hook: the mark, then the cost. A merge is skipped
- * before anything is looked up, and the hook never fails the commit: a
- * problem prints a warning and the commit goes ahead without what failed.
+ * The prepare-commit-msg hook: the mark, then the cost. A merge, or a commit
+ * made with `MODELMARK_DISABLE` set, is skipped before anything is looked up,
+ * so its replies count toward the next commit. The hook never fails the
+ * commit: a problem prints a warning and the commit goes ahead without what
+ * failed.
  * @param messageFile - the message file git passes
  * @param source - the message's source git passes, such as `merge`
+ * @param env - the environment
  */
-export async function hookCommand(messageFile: string, source?: string): Promise<void> {
-    if (source && SKIPPED_SOURCES.includes(source)) {
+export async function hookCommand(
+    messageFile: string,
+    source?: string,
+    env = process.env,
+): Promise<void> {
+    if ((source && SKIPPED_SOURCES.includes(source)) || hookDisabled(env)) {
         return
     }
 
@@ -142,7 +150,7 @@ export async function hookCommand(messageFile: string, source?: string): Promise
     }
 
     try {
-        await costMessage(messageFile, detection)
+        await costMessage(messageFile, detection, env)
     } catch (error) {
         console.error(`modelmark: commit left without a cost (${String(error)})`)
     }

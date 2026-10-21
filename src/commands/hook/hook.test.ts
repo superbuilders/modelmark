@@ -299,6 +299,16 @@ describe('hookCommand', () => {
         )
     })
 
+    test('skips a commit made with MODELMARK_DISABLE set', async () => {
+        const path = messageFile('By hand\n')
+
+        vi.mocked(detect).mockClear()
+        await hookCommand(path, undefined, { MODELMARK_DISABLE: '1' })
+        await hookCommand(path, undefined, { MODELMARK_DISABLE: '0' })
+
+        expect(detect).toHaveBeenCalledOnce()
+    })
+
     test('skips a merge without looking for an agent', async () => {
         const merge = messageFile("Merge branch 'dev'\n")
 

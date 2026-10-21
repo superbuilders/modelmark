@@ -10,8 +10,8 @@ import {
     readTestedRecord,
     testedVersion,
 } from '../../agents/versions'
-import { LOCAL_BIN } from '../../setup/constants'
-import { findHookFile, hookStyle, wantedStyle } from '../../setup/hooks'
+import { DISABLE_VARIABLE, LOCAL_BIN } from '../../setup/constants'
+import { findHookFile, hookDisabled, hookStyle, wantedStyle } from '../../setup/hooks'
 import { markTrailer } from '../../trailers/mark'
 import { LEVEL_SYMBOLS, RUNS_FROM } from './constants'
 
@@ -53,7 +53,7 @@ function reachCheck(facts: DoctorFacts): Check {
     return {
         level: 'fail',
         text: 'modelmark isn’t on PATH, so the hook does nothing',
-        fix: 'run bun link in the modelmark checkout',
+        fix: 'run bun add -g modelmark, or add Bun’s bin folder to the PATH git uses',
     }
 }
 
@@ -64,7 +64,11 @@ function reachCheck(facts: DoctorFacts): Check {
  */
 function hookCheck(facts: DoctorFacts): Check {
     if (!facts.hook) {
-        return { level: 'info', text: 'Not in a git repository, so there is no hook to check' }
+        return {
+            level: 'fail',
+            text: 'Not in a git repository, so there is no hook to check',
+            fix: 'run modelmark doctor inside the repository',
+        }
     }
 
     const path = relative(process.cwd(), facts.hook.path)
@@ -94,10 +98,17 @@ function hookCheck(facts: DoctorFacts): Check {
 /**
  * Which agent is running the doctor, and the mark a commit here would get.
  * @param facts - what the doctor found
+ * @param ready - whether the hook is in place to add the mark
  * @returns the checks
  */
-function agentChecks(facts: DoctorFacts): Check[] {
+function agentChecks(facts: DoctorFacts, ready: boolean): Check[] {
     const { detection } = facts
+
+    if (facts.disabled) {
+        return [
+            { level: 'warn', text: `${DISABLE_VARIABLE} is set, so a commit here gets no mark` },
+        ]
+    }
 
     if (!detection) {
         return [{ level: 'info', text: 'No agent is running this, so a commit here gets no mark' }]
@@ -107,19 +118,29 @@ function agentChecks(facts: DoctorFacts): Check[] {
         level: 'ok',
         text: `Found ${harnessName(detection.agent)} ${VIA_TEXT[detection.via]}`,
     }
+    const gets = ready ? 'a commit here gets' : 'once the hook works, a commit here gets'
 
     if (detection.model === null) {
         return [
             found,
             {
                 level: 'warn',
-                text: `Its model couldn’t be read, so a commit here gets ${markTrailer(detection)}`,
-                fix: 'check that this harness version passed the lab',
+                text: `Its model couldn’t be read, so ${gets} ${markTrailer(detection)}`,
+                fix: 'update modelmark, since this harness may have changed where it writes the model',
             },
         ]
     }
 
-    return [found, { level: 'ok', text: `A commit here gets ${markTrailer(detection)}` }]
+    return [found, { level: 'ok', text: `${capitalize(gets)} ${markTrailer(detection)}` }]
+}
+
+/**
+ * A sentence's first letter in capitals.
+ * @param text - the sentence
+ * @returns it, capitalized
+ */
+function capitalize(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
 /**
@@ -148,7 +169,7 @@ function versionCheck(facts: DoctorFacts, agent: AgentId): Check | null {
     return {
         level: 'warn',
         text: `${name} hasn’t been tested on ${platform}${newest}, so its marks may be wrong`,
-        fix: 'run bun scripts/lab run --all in the modelmark checkout',
+        fix: 'update modelmark, which lists the versions it was tested with',
     }
 }
 
@@ -161,7 +182,10 @@ export function doctorChecks(facts: DoctorFacts): Check[] {
     const agents = Object.keys(HARNESS_COMMANDS) as AgentId[]
     const versions = agents.map(agent => versionCheck(facts, agent)).filter(check => check !== null)
 
-    return [reachCheck(facts), hookCheck(facts), ...agentChecks(facts), ...versions]
+    const setup = [reachCheck(facts), hookCheck(facts)]
+    const ready = setup.every(check => check.level !== 'fail')
+
+    return [...setup, ...agentChecks(facts, ready), ...versions]
 }
 
 /**
@@ -183,6 +207,7 @@ async function gatherFacts(): Promise<DoctorFacts> {
         wanted: hook ? await wantedStyle(hook.root) : null,
         localBin: hook ? existsSync(join(hook.root, LOCAL_BIN)) : false,
         detection,
+        disabled: hookDisabled(process.env),
         platform: currentPlatform(),
         versions: { 'claude-code': claudeCode, codex, pi },
         tested: readTestedRecord(),

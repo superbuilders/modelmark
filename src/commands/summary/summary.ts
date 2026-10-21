@@ -7,18 +7,29 @@ import { summaryBadges } from './badges'
 import { COMMIT_SEPARATOR, DEFAULT_BRANCHES, NO_MARK, NO_MARK_ROW } from './constants'
 import { commitsText, costText } from './words'
 
-import type { AgentStyles, MarkCount, Summary, SummaryFormat } from './types'
+import type {
+    AgentColors,
+    AgentLogos,
+    AgentStyles,
+    MarkCount,
+    Summary,
+    SummaryFormat,
+} from './types'
 
 /**
  * Count the marks across a range of commits, skipping merges, and add up
  * their costs. A squashed commit counts once for each mark its body holds,
- * and its cost is the sum of its cost lines.
+ * and its cost is the sum of its cost lines. Git reads the range only as
+ * revisions, so a typo is an error rather than an option or a file to filter by.
  * @param range - a git revision range, such as `main..HEAD`
  * @param cwd - the repository (default: this process's folder)
  * @returns the counts
  */
 export async function summarize(range: string, cwd?: string): Promise<Summary> {
-    const output = await git(['log', '--no-merges', `--format=${COMMIT_SEPARATOR}%B`, range], cwd)
+    const output = await git(
+        ['log', '--no-merges', `--format=${COMMIT_SEPARATOR}%B`, '--end-of-options', range, '--'],
+        cwd,
+    )
     const commits = output.split(COMMIT_SEPARATOR).slice(1)
     const counts = new Map<string, MarkCount>()
     let unmarked = 0
@@ -173,7 +184,7 @@ function formatSummary(
             return JSON.stringify({ range, ...summary })
         }
 
-        case 'table': {
+        case 'markdown': {
             return summaryTable(summary)
         }
 
@@ -193,24 +204,24 @@ function formatSummary(
  * @param options - output options
  * @param options.format - how to print the summary
  * @param options.json - shorthand for `format: 'json'`
- * @param options.color - badge colors for agents modelmark doesn't know
- * @param options.logo - badge logos for agents modelmark doesn't know
+ * @param options.badgeColor - badge colors for agents modelmark doesn't know
+ * @param options.badgeLogo - badge logos for agents modelmark doesn't know
  */
 export async function summaryCommand(
     range: string | undefined,
     {
         format = 'text',
         json = false,
-        color = {},
-        logo = {},
-    }: { format?: SummaryFormat; json?: boolean } & Partial<AgentStyles>,
+        badgeColor = {},
+        badgeLogo = {},
+    }: { format?: SummaryFormat; json?: boolean; badgeColor?: AgentColors; badgeLogo?: AgentLogos },
 ): Promise<void> {
     const covered = range ?? (await defaultRange())
 
     console.log(
         formatSummary(json ? 'json' : format, covered, await summarize(covered), {
-            color,
-            logo,
+            color: badgeColor,
+            logo: badgeLogo,
         }),
     )
 }

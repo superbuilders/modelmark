@@ -14,12 +14,20 @@ Works with Claude Code, Codex and Pi. Needs [Bun](https://bun.sh).
 
 ## Install
 
-For a whole team, add it to the repository. Everyone who runs `bun install`
-gets it:
+For a whole team, add it to the repository:
 
 ```sh
 bun add -d modelmark
 bunx modelmark install
+```
+
+With Husky, `install` writes to `.husky/prepare-commit-msg`. Commit that file
+and everyone gets the hook. Without Husky, the hook lives in `.git/hooks`,
+which git doesn't share, so add `modelmark install` to the `prepare` script in
+`package.json`. Then everyone who runs `bun install` gets it:
+
+```json
+"scripts": { "prepare": "modelmark install" }
 ```
 
 Just for you:
@@ -33,6 +41,15 @@ modelmark install    # in each repository
 repository uses Husky). The hook never blocks a commit: if anything goes wrong,
 the commit goes through unmarked. Run `modelmark doctor` to check the setup.
 
+To leave one commit unmarked, set `MODELMARK_DISABLE=1`:
+
+```sh
+MODELMARK_DISABLE=1 git commit
+```
+
+It gets no cost line either; its replies count toward the next commit.
+`git commit --no-verify` doesn't skip modelmark: git runs this hook even then.
+
 ## Commands
 
 | Command                     | What it does                                            |
@@ -43,8 +60,8 @@ the commit goes through unmarked. Run `modelmark doctor` to check the setup.
 | `modelmark summary [range]` | Count the marks across commits (default: this branch's) |
 | `modelmark prices [filter]` | Show the prices commits are costed with                 |
 
-`summary` and `prices` take `--format text|json|table`. `summary` also takes
-`--format badges`, for a pull request:
+`summary` and `prices` take `--format text|json|markdown` (`--json` for short).
+`summary` also takes `--format badges`, HTML badges for a pull request:
 
 ```sh
 $ modelmark summary
@@ -59,7 +76,7 @@ origin/main..HEAD: 5 commits
 <img alt="No mark" src="https://img.shields.io/badge/No_mark-30363D?style=flat-square"><img alt="1 commit" src="https://img.shields.io/badge/1_commit-57606A?style=flat-square">
 
 Give an agent modelmark doesn't know a color and logo with
-`--color jojo=E73A2C --logo jojo=jojo.svg`.
+`--badge-color jojo=E73A2C --badge-logo jojo=jojo.svg`.
 
 ## Reading a mark
 

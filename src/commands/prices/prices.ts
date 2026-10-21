@@ -1,6 +1,6 @@
 import { modelId, priceOf } from '../../pricing/cost'
 import { loadPriceList, priceListFetchedAt, savePriceList } from '../../pricing/prices'
-import { runCommand } from '../../system/command'
+import { git, runCommand } from '../../system/command'
 import { markdownTable } from '../../system/markdown'
 import { UNKNOWN_MODEL } from '../../trailers/constants'
 import { parseMark } from '../../trailers/mark'
@@ -24,16 +24,27 @@ export async function refreshPricesCommand(env = process.env): Promise<void> {
  * The models this repository's commits are marked with, each once: a
  * gateway's prefix (`anthropic-primary/`) is dropped, as costing drops it.
  * @param cwd - the repository (default: this process's folder)
- * @returns the models, sorted, or none outside a repository
+ * @returns the models, sorted, or none in a repository with no commits yet
  */
 async function markedModels(cwd?: string): Promise<string[]> {
-    const log = await runCommand(['git', 'log', '--no-merges', '--format=%B', 'HEAD'], { cwd })
+    /*
+     * With no HEAD, git exits 1 in a repository with no commits and 128
+     * outside one.
+     */
+    const head = await runCommand(['git', 'rev-parse', '--verify', '--quiet', 'HEAD'], { cwd })
 
-    if (log.exitCode !== 0) {
+    if (head.exitCode === 1) {
         return []
     }
 
-    const models = marksIn(log.stdout).map(mark => modelId(parseMark(mark).model))
+    if (head.exitCode !== 0) {
+        throw new Error(
+            'Not in a git repository; name a model, such as modelmark prices opus, or pass --all',
+        )
+    }
+
+    const log = await git(['log', '--no-merges', '--format=%B', 'HEAD'], cwd)
+    const models = marksIn(log).map(mark => modelId(parseMark(mark).model))
 
     return [...new Set(models)].filter(model => model && model !== UNKNOWN_MODEL).toSorted()
 }
@@ -212,6 +223,10 @@ export async function pricesCommand(
     env: Env = process.env,
     cwd?: string,
 ): Promise<void> {
+    if (filter && all) {
+        throw new Error('Name a model or pass --all, not both')
+    }
+
     const prices = loadPriceList(env)
     const catalog = Object.keys(prices)
     const { models, subject } = await chosenModels(filter, all, catalog, cwd)
@@ -229,20 +244,20 @@ export async function pricesCommand(
         return
     }
 
+    const rows = models.flatMap(model => priceRows(model, priceOf(model, prices)))
+
+    if (format === 'markdown') {
+        console.log(markdownTable(PRICE_HEADER, rows))
+
+        return
+    }
+
     if (models.length === 0) {
         console.log(
             filter
                 ? `No model matches “${filter}”; modelmark prices --all lists all ${catalog.length}`
                 : `No commits here carry a mark yet; name a model, such as modelmark prices opus, or pass --all to list all ${catalog.length}`,
         )
-
-        return
-    }
-
-    const rows = models.flatMap(model => priceRows(model, priceOf(model, prices)))
-
-    if (format === 'table') {
-        console.log(markdownTable(PRICE_HEADER, rows))
 
         return
     }

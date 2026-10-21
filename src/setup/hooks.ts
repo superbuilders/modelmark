@@ -2,8 +2,9 @@ import { readFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 
 import { git } from '../system/command'
-import { HOOK_LINES, HOOK_NAME, PACKAGE_NAME } from './constants'
+import { DISABLE_VARIABLE, ENABLED_VALUES, HOOK_LINES, HOOK_NAME, PACKAGE_NAME } from './constants'
 
+import type { Env } from '../system/types'
 import type { HookFile, HookStyle } from './types'
 
 /**
@@ -65,4 +66,15 @@ export async function wantedStyle(root: string): Promise<HookStyle> {
     } catch {
         return 'path'
     }
+}
+
+/**
+ * Whether `MODELMARK_DISABLE` turns modelmark off for this commit.
+ * @param env - the environment
+ * @returns true when it is set to anything but empty, `0` or `false`
+ */
+export function hookDisabled(env: Env): boolean {
+    const value = env[DISABLE_VARIABLE]
+
+    return value !== undefined && !ENABLED_VALUES.includes(value)
 }

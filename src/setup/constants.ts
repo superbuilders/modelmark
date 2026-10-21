@@ -19,3 +19,9 @@ export const HOOK_LINES: Readonly<Record<HookStyle, string>> = {
     path: 'if command -v modelmark >/dev/null 2>&1; then modelmark hook "$@" || true; fi',
     dependency: `if [ -x ${LOCAL_BIN} ]; then ${LOCAL_BIN} hook "$@" || true; fi`,
 }
+
+/** Set to skip modelmark for a commit (`MODELMARK_DISABLE=1 git commit`), as `HUSKY=0` skips Husky. */
+export const DISABLE_VARIABLE = 'MODELMARK_DISABLE'
+
+/** Values of `MODELMARK_DISABLE` that leave modelmark on. */
+export const ENABLED_VALUES: readonly string[] = ['', '0', 'false']

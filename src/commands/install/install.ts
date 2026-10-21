@@ -116,7 +116,7 @@ function reachWarning(hook: HookFile, style: HookStyle): string | null {
 
     return Bun.which('modelmark')
         ? null
-        : 'modelmark isn’t on PATH yet, so the hook does nothing; run bun link in the modelmark checkout'
+        : 'modelmark isn’t on PATH yet, so the hook does nothing; run bun add -g modelmark'
 }
 
 /** What `install` says for each outcome, before the hook's path. */
@@ -125,6 +125,13 @@ const OUTCOME_TEXT: Readonly<Record<InstallResult['outcome'], string>> = {
     switched: 'Switched the hook to the new modelmark line in',
     unchanged: 'Already installed in',
 }
+
+/** What `install` says when Husky shares the hook through the repository. */
+const HUSKY_NOTE = 'This repository uses Husky, so commit that file to mark everyone’s commits'
+
+/** What `install` says when the hook lives in `.git/hooks`, which git never shares. */
+const CHECKOUT_NOTE =
+    'This marks commits in this checkout only; for everyone, add modelmark install to the prepare script in package.json'
 
 /** What `install` says about the one thing modelmark does on the network. */
 const PRICES_NOTICE =
@@ -139,21 +146,24 @@ export async function installCommand(): Promise<void> {
 
     console.log(`${OUTCOME_TEXT[outcome]} ${shown(hook)}`)
 
-    if (outcome === 'installed' && hook.husky) {
-        console.log('This repository uses Husky, so commit that file to mark everyone’s commits')
+    /*
+     * Notes and warnings go to stderr, so they still show when the result is piped.
+     */
+    if (outcome === 'installed') {
+        console.error(hook.husky ? HUSKY_NOTE : CHECKOUT_NOTE)
     }
 
     const warning = reachWarning(hook, style)
 
     if (warning) {
-        console.log(warning)
+        console.error(warning)
     }
 
     /*
      * Like Next.js's telemetry notice, said once rather than on every run.
      */
     if (outcome !== 'unchanged') {
-        console.log(PRICES_NOTICE)
+        console.error(PRICES_NOTICE)
     }
 }
 
