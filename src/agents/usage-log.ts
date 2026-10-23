@@ -25,31 +25,28 @@ function isAbsolutePath(value: unknown): value is string {
 }
 
 /**
- * A reply's cache writes by lifetime, when they are well formed: each label a
- * lifetime, each value a count, together adding up to the writes.
+ * Whether a value is a well-formed split of cache writes by lifetime: each
+ * label a lifetime, each value a count, together adding up to the writes.
  * @param value - the `cacheWriteByTtl` member
  * @param cacheWrite - the reply's `cacheWrite`
- * @returns the split, `{}` when there is none, or undefined when it is malformed
+ * @returns true for a split a reader keeps
  */
-function cacheWriteSplit(
-    value: unknown,
-    cacheWrite: number,
-): { cacheWriteByTtl?: Record<string, number> } | undefined {
-    if (value === undefined) {
-        return {}
-    }
-
+function isCacheSplit(value: unknown, cacheWrite: number): value is Record<string, number> {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-        return undefined
+        return false
     }
 
-    const entries = Object.entries(value)
-    const wellFormed = entries.every(([ttl, tokens]) => CACHE_TTL.test(ttl) && isCount(tokens))
-    const sum = entries.reduce((total, [, tokens]) => total + (tokens as number), 0)
+    let sum = 0
 
-    return wellFormed && sum === cacheWrite
-        ? { cacheWriteByTtl: Object.fromEntries(entries) }
-        : undefined
+    for (const [ttl, tokens] of Object.entries(value)) {
+        if (!CACHE_TTL.test(ttl) || !isCount(tokens)) {
+            return false
+        }
+
+        sum += tokens
+    }
+
+    return sum === cacheWrite
 }
 
 /**
@@ -70,6 +67,7 @@ function replyOf(record: unknown): LoggedReply | undefined {
     ].map(key => valueAt(record, key))
     const cwd = valueAt(record, 'cwd')
     const paths = valueAt(record, 'paths') ?? []
+    const split = valueAt(record, 'cacheWriteByTtl')
     const time = typeof at === 'string' && USAGE_LOG_TIME.test(at) ? Date.parse(at) : Number.NaN
 
     if (
@@ -82,28 +80,25 @@ function replyOf(record: unknown): LoggedReply | undefined {
         cacheRead + cacheWrite > input ||
         !isAbsolutePath(cwd) ||
         !Array.isArray(paths) ||
-        !paths.every(isAbsolutePath)
+        !paths.every(isAbsolutePath) ||
+        (split !== undefined && !isCacheSplit(split, cacheWrite))
     ) {
         return undefined
     }
 
-    const split = cacheWriteSplit(valueAt(record, 'cacheWriteByTtl'), cacheWrite)
-
-    return (
-        split && {
-            use: {
-                model,
-                input: input - cacheRead - cacheWrite,
-                cacheRead,
-                cacheWrite,
-                ...split,
-                output,
-            },
-            time,
-            cwd,
-            paths,
-        }
-    )
+    return {
+        use: {
+            model,
+            input: input - cacheRead - cacheWrite,
+            cacheRead,
+            cacheWrite,
+            ...(split === undefined ? {} : { cacheWriteByTtl: split }),
+            output,
+        },
+        time,
+        cwd,
+        paths,
+    }
 }
 
 /**

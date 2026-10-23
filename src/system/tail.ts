@@ -135,7 +135,10 @@ export function firstRecord(path: string, chunkBytes = TAIL_CHUNK_BYTES): unknow
         const buffer = Buffer.allocUnsafe(chunkBytes)
         const text = buffer.subarray(0, readSync(fd, buffer, 0, chunkBytes, 0)).toString('utf8')
 
-        return parseLine(text.split('\n').find(line => line.trim() !== '') ?? '')
+        const start = text.search(/\S/)
+        const end = text.indexOf('\n', start)
+
+        return start === -1 ? undefined : parseLine(text.slice(start, end === -1 ? undefined : end))
     } finally {
         closeSync(fd)
     }

@@ -56,7 +56,7 @@ interface ProviderCase {
 }
 
 const CONFORMANCE = join(import.meta.dirname, 'conformance')
-const ajv = new Ajv2020({ allErrors: true })
+const ajv = new Ajv2020()
 
 ajv.addSchema(schema)
 

@@ -3,6 +3,7 @@ import { join } from 'node:path'
 
 import { describe, expect, test } from 'vitest'
 
+import { addTokens } from '../trailers/tokens'
 import { usageLog, usageLogReplies } from './usage-log'
 
 /*
@@ -52,23 +53,22 @@ describe('the spec conformance cases', () => {
         }
 
         const uses = [...usageLogReplies(log.path)].map(reply => reply.use)
-        const totals = { input: 0, cacheRead: 0, cacheWrite: 0, output: 0, fresh: 0 }
+        const sum = addTokens(uses)
         const cacheWriteByTtl: Record<string, number> = {}
 
         for (const use of uses) {
-            totals.input += use.input + use.cacheRead + use.cacheWrite
-            totals.cacheRead += use.cacheRead
-            totals.cacheWrite += use.cacheWrite
-            totals.output += use.output
-            totals.fresh += use.input
-
             for (const [ttl, n] of Object.entries(use.cacheWriteByTtl ?? {})) {
                 cacheWriteByTtl[ttl] = (cacheWriteByTtl[ttl] ?? 0) + n
             }
         }
 
         expect(uses).toHaveLength(replies ?? -1)
-        expect({ ...totals, cacheWriteByTtl }).toEqual(tokens)
+        expect({
+            ...sum,
+            input: sum.input + sum.cacheRead + sum.cacheWrite,
+            fresh: sum.input,
+            cacheWriteByTtl,
+        }).toEqual(tokens)
     })
 })
 
