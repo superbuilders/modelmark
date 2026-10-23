@@ -39,6 +39,24 @@ const NESTED = parseProcessTable(`
      30     1 tmux new-session -d
 `)
 
+/**
+ * Create an empty file, with its folders.
+ * @param path - the file
+ * @returns the path
+ */
+function touch(path: string): string {
+    mkdirSync(join(path, '..'), { recursive: true })
+    writeFileSync(path, '')
+
+    return path
+}
+
+/** Executables under folders with spaces in their names, as Claude's desktop app installs `claude`. */
+const SPACED = mkdtempSync(join(tmpdir(), 'modelmark-detect-'))
+const DESKTOP_CLAUDE = touch(join(SPACED, 'Application Support', 'Claude', 'MacOS', 'claude'))
+const SPACED_CODEX = touch(join(SPACED, 'My Tools', 'codex'))
+const SHELL = touch(join(SPACED, 'bin', 'sh'))
+
 const HUMAN = parseProcessTable(`
     100    90 bun modelmark hook .git/COMMIT_EDITMSG
      90    80 git commit
@@ -61,11 +79,33 @@ describe('agentOfCommand', () => {
     ])('%s is %s', (args, agent) => {
         expect(agentOfCommand(args)).toBe(agent)
     })
+
+    test.each([
+        [`${DESKTOP_CLAUDE} --output-format stream-json --verbose`, 'claude-code'],
+        [DESKTOP_CLAUDE, 'claude-code'],
+        [`node ${SPACED_CODEX} exec hi`, 'codex'],
+        [`${SHELL} -c ${DESKTOP_CLAUDE} --resume abc`, undefined],
+        [`${join(SPACED, 'Application Support', 'claude-notes')} --help`, undefined],
+    ])('a path with a space in it: %s is %s', (args, agent) => {
+        expect(agentOfCommand(args)).toBe(agent)
+    })
 })
 
 describe('findAgent', () => {
     test('the nearest agent wins when agents run inside each other', () => {
         expect(findAgent(NESTED, 100, {})).toEqual({ agent: 'codex', via: 'process-tree' })
+    })
+
+    test("Claude's desktop app is found, though its path has a space in it", () => {
+        const desktop = parseProcessTable(`
+            100    90 bun modelmark hook .git/COMMIT_EDITMSG
+             90    40 /bin/zsh -c git commit -m test
+             40    30 ${DESKTOP_CLAUDE} --output-format stream-json --verbose
+             30    20 /Applications/Claude.app/Contents/Helpers/disclaimer --pgroup -- ${DESKTOP_CLAUDE}
+             20     1 /Applications/Claude.app/Contents/MacOS/Claude
+        `)
+
+        expect(findAgent(desktop, 100, {})).toEqual({ agent: 'claude-code', via: 'process-tree' })
     })
 
     test("a person's commit has no agent, even with an agent's leftover markers", () => {

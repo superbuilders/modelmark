@@ -1,5 +1,6 @@
-import { basename } from 'node:path'
+import { basename, isAbsolute } from 'node:path'
 
+import { isFile } from '../system/files'
 import { readProcessTable } from '../system/processes'
 import { parseMark } from '../trailers/mark'
 import { DECLARED_MARK, HARNESS_COMMANDS, MAX_TREE_DEPTH, SCRIPT_RUNTIMES } from './constants'
@@ -17,16 +18,42 @@ const AGENTS_BY_EXECUTABLE = new Map(
 )
 
 /**
+ * Split a command line into its executable and the arguments after it.
+ *
+ * `ps` joins the executable and its arguments with spaces, so the first space
+ * can fall inside the executable's path: Claude's desktop app runs `claude`
+ * from under `~/Library/Application Support`. An absolute first word that
+ * isn't a file runs on to the shortest longer prefix that is one.
+ * @param line - a command line, executable first, without leading spaces
+ * @returns the executable and the rest of the line
+ */
+function splitExecutable(line: string): [executable: string, rest: string] {
+    const cuts = [...line.matchAll(/\s/g), { index: line.length }].map(({ index }) => index)
+    const [first = line.length, ...later] = cuts
+    const word = line.slice(0, first)
+
+    if (isAbsolute(word) && !isFile(word)) {
+        const cut = later.find(end => isFile(line.slice(0, end)))
+
+        if (cut !== undefined) {
+            return [line.slice(0, cut), line.slice(cut)]
+        }
+    }
+
+    return [word, line.slice(first)]
+}
+
+/**
  * Name the agent a command line starts, if any.
  * @param args - a full command line, executable first
  * @returns the agent, or undefined for any other program
  */
 export function agentOfCommand(args: string): AgentId | undefined {
-    const [first = '', second = ''] = args.trim().split(/\s+/)
+    const [first, rest] = splitExecutable(args.trim())
     let executable = basename(first)
 
     if (SCRIPT_RUNTIMES.includes(executable)) {
-        executable = basename(second)
+        executable = basename(splitExecutable(rest.trim())[0])
     }
 
     return AGENTS_BY_EXECUTABLE.get(executable)

@@ -52,6 +52,20 @@ export function findFileNewestFirst(
 }
 
 /**
+ * Whether a path names a file (not a folder). Never throws: a missing path,
+ * one too long for the system, or one the sandbox hides is not a file.
+ * @param path - the path
+ * @returns true for an existing file
+ */
+export function isFile(path: string): boolean {
+    try {
+        return statSync(path).isFile()
+    } catch {
+        return false
+    }
+}
+
+/**
  * List the files directly in a folder whose names end with a suffix.
  * @param dir - the folder
  * @param suffix - the name ending to keep, such as an extension

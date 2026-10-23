@@ -131,7 +131,10 @@ they lack. Move code down a layer rather than adding an upward edge.
 ## How detection works
 
 The agent is the nearest `claude`, `codex` or `pi` process above the hook,
-from one `ps` call. Environment markers are only a fallback when the walk is
+from one `ps` call. `ps` joins a command's words with spaces, so an absolute
+executable path that isn't a file runs on to the shortest longer prefix that
+is one: Claude's desktop app runs `claude` from under
+`~/Library/Application Support`. Environment markers are only a fallback when the walk is
 blocked, because they outlive their agent: a terminal opened from an agent, or
 an agent started inside another, inherits them. Codex's sandbox hides its
 parent processes, so its sandbox markers name it when the walk tops out.
