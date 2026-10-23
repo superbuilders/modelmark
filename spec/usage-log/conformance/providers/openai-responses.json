@@ -1,0 +1,31 @@
+{
+    "$comment": "OpenAI Responses API, a model that charges for cache writes: input_tokens includes cached tokens; cached_tokens counts reads only. The usage is the example in OpenAI's guide.",
+    "source": "https://developers.openai.com/api/docs/guides/prompt-caching",
+    "api": "openai-responses",
+    "model": "gpt-6.1-sol",
+    "usage": {
+        "input_tokens": 12000,
+        "input_tokens_details": {
+            "cached_tokens": 4000,
+            "cache_write_tokens": 7000,
+            "cache_write_tokens_details": {
+                "ttl_30m_tokens": 3000,
+                "ttl_12h_tokens": 4000
+            }
+        },
+        "output_tokens": 900,
+        "output_tokens_details": {
+            "reasoning_tokens": 600
+        }
+    },
+    "line": {
+        "input": 12000,
+        "cacheRead": 4000,
+        "cacheWrite": 7000,
+        "cacheWriteByTtl": {
+            "30m": 3000,
+            "12h": 4000
+        },
+        "output": 900
+    }
+}

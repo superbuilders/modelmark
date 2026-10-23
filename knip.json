@@ -7,6 +7,7 @@
     "project": [
         "src/**/*.ts",
         "scripts/**/*.ts",
+        "spec/**/*.ts",
 
         "*.ts",
         ".oxlint/plugins/**/*.mjs"

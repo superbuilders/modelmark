@@ -1,0 +1,22 @@
+{
+    "$comment": "OpenAI Chat Completions API: prompt_tokens includes cached tokens; completion_tokens includes reasoning.",
+    "source": "https://platform.openai.com/docs/api-reference/chat/object",
+    "api": "openai-chat-completions",
+    "model": "gpt-5.5",
+    "usage": {
+        "prompt_tokens": 2006,
+        "prompt_tokens_details": {
+            "cached_tokens": 1920
+        },
+        "completion_tokens": 300,
+        "completion_tokens_details": {
+            "reasoning_tokens": 192
+        }
+    },
+    "line": {
+        "input": 2006,
+        "cacheRead": 1920,
+        "cacheWrite": 0,
+        "output": 300
+    }
+}

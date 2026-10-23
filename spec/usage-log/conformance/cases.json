@@ -1,0 +1,141 @@
+{
+    "$comment": "What a conforming reader gets from each file. conforms: whether every line follows v1.md (section 10). accepted: whether a reader reads the file at all (6.1). replies: how many reply lines it keeps (6.2). tokens: those replies' totals, with fresh = input - cacheRead - cacheWrite (5.1) and cacheWriteByTtl summed per lifetime.",
+    "cases": [
+        {
+            "file": "accepted/minimal.jsonl",
+            "conforms": true,
+            "accepted": true,
+            "session": "s-1",
+            "replies": 1,
+            "tokens": {
+                "input": 49731,
+                "cacheRead": 48211,
+                "cacheWrite": 0,
+                "output": 812,
+                "fresh": 1520,
+                "cacheWriteByTtl": {}
+            }
+        },
+        {
+            "file": "accepted/crlf.jsonl",
+            "conforms": true,
+            "accepted": true,
+            "session": "s-1",
+            "replies": 1,
+            "tokens": {
+                "input": 49731,
+                "cacheRead": 48211,
+                "cacheWrite": 0,
+                "output": 812,
+                "fresh": 1520,
+                "cacheWriteByTtl": {}
+            }
+        },
+        {
+            "file": "accepted/no-replies.jsonl",
+            "conforms": true,
+            "accepted": true,
+            "session": "s-1",
+            "replies": 0,
+            "tokens": {
+                "input": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "output": 0,
+                "fresh": 0,
+                "cacheWriteByTtl": {}
+            }
+        },
+        {
+            "file": "accepted/every-member.jsonl",
+            "conforms": true,
+            "accepted": true,
+            "session": "s-1",
+            "replies": 2,
+            "tokens": {
+                "input": 102392,
+                "cacheRead": 99526,
+                "cacheWrite": 1250,
+                "output": 1019,
+                "fresh": 1616,
+                "cacheWriteByTtl": {
+                    "5m": 10,
+                    "1h": 1240
+                }
+            }
+        },
+        {
+            "file": "accepted/two-providers.jsonl",
+            "conforms": true,
+            "accepted": true,
+            "session": "s-1",
+            "replies": 2,
+            "tokens": {
+                "input": 61731,
+                "cacheRead": 52211,
+                "cacheWrite": 7000,
+                "output": 1712,
+                "fresh": 2520,
+                "cacheWriteByTtl": {
+                    "30m": 3000,
+                    "12h": 4000
+                }
+            }
+        },
+        {
+            "file": "accepted/torn-last-line.jsonl",
+            "conforms": false,
+            "accepted": true,
+            "session": "s-1",
+            "replies": 1,
+            "tokens": {
+                "input": 49731,
+                "cacheRead": 48211,
+                "cacheWrite": 0,
+                "output": 812,
+                "fresh": 1520,
+                "cacheWriteByTtl": {}
+            }
+        },
+        {
+            "file": "accepted/bad-lines-skipped.jsonl",
+            "conforms": false,
+            "accepted": true,
+            "session": "s-1",
+            "replies": 1,
+            "tokens": {
+                "input": 49731,
+                "cacheRead": 48211,
+                "cacheWrite": 0,
+                "output": 812,
+                "fresh": 1520,
+                "cacheWriteByTtl": {}
+            }
+        },
+        {
+            "file": "rejected/no-header.jsonl",
+            "conforms": false,
+            "accepted": false
+        },
+        {
+            "file": "rejected/version-2.jsonl",
+            "conforms": false,
+            "accepted": false
+        },
+        {
+            "file": "rejected/empty-session.jsonl",
+            "conforms": false,
+            "accepted": false
+        },
+        {
+            "file": "rejected/no-session.jsonl",
+            "conforms": false,
+            "accepted": false
+        },
+        {
+            "file": "rejected/empty.jsonl",
+            "conforms": false,
+            "accepted": false
+        }
+    ]
+}

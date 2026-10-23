@@ -1,0 +1,20 @@
+{
+    "$comment": "Google Gemini API: promptTokenCount includes cached content; thoughts are counted beside candidates, and tool-use prompts beside the prompt.",
+    "source": "https://ai.google.dev/api/generate-content#UsageMetadata",
+    "api": "google-gemini",
+    "model": "gemini-2.5-pro",
+    "usage": {
+        "promptTokenCount": 30000,
+        "cachedContentTokenCount": 24000,
+        "toolUsePromptTokenCount": 512,
+        "candidatesTokenCount": 700,
+        "thoughtsTokenCount": 1300,
+        "totalTokenCount": 32512
+    },
+    "line": {
+        "input": 30512,
+        "cacheRead": 24000,
+        "cacheWrite": 0,
+        "output": 2000
+    }
+}

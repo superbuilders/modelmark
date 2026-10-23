@@ -1,0 +1,42 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/superbuilders/modelmark/main/spec/usage-log/v1.schema.json",
+    "title": "modelmark usage log, version 1: one line",
+    "description": "A line of a usage log. The first non-empty line is a header; every line after it is a reply. A reply must also meet two sums the schema can't express: cacheRead + cacheWrite <= input, and cacheWriteByTtl's values add up to cacheWrite (v1.md, section 6.2).",
+    "oneOf": [{ "$ref": "#/$defs/header" }, { "$ref": "#/$defs/reply" }],
+    "$defs": {
+        "header": {
+            "type": "object",
+            "required": ["modelmark", "version", "session"],
+            "properties": {
+                "modelmark": { "const": "usage" },
+                "version": { "const": 1 },
+                "session": { "type": "string", "minLength": 1 }
+            }
+        },
+        "reply": {
+            "type": "object",
+            "required": ["at", "model", "input", "cacheRead", "cacheWrite", "output", "cwd"],
+            "properties": {
+                "at": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt]\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?([Zz]|[+-]\\d{2}:\\d{2})$"
+                },
+                "model": { "type": "string", "minLength": 1 },
+                "input": { "$ref": "#/$defs/tokens" },
+                "cacheRead": { "$ref": "#/$defs/tokens" },
+                "cacheWrite": { "$ref": "#/$defs/tokens" },
+                "cacheWriteByTtl": {
+                    "type": "object",
+                    "propertyNames": { "pattern": "^[1-9][0-9]*[smhd]$" },
+                    "additionalProperties": { "$ref": "#/$defs/tokens" }
+                },
+                "output": { "$ref": "#/$defs/tokens" },
+                "cwd": { "$ref": "#/$defs/absolutePath" },
+                "paths": { "type": "array", "items": { "$ref": "#/$defs/absolutePath" } }
+            }
+        },
+        "tokens": { "type": "integer", "minimum": 0 },
+        "absolutePath": { "type": "string", "pattern": "^/" }
+    }
+}

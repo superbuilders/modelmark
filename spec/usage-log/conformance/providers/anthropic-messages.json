@@ -1,0 +1,26 @@
+{
+    "$comment": "Anthropic Messages API: input_tokens leaves out cache reads and writes; writes are split by lifetime.",
+    "source": "https://docs.claude.com/en/docs/build-with-claude/prompt-caching",
+    "api": "anthropic-messages",
+    "model": "claude-opus-5-5",
+    "usage": {
+        "input_tokens": 96,
+        "cache_read_input_tokens": 51315,
+        "cache_creation_input_tokens": 1250,
+        "cache_creation": {
+            "ephemeral_5m_input_tokens": 10,
+            "ephemeral_1h_input_tokens": 1240
+        },
+        "output_tokens": 207
+    },
+    "line": {
+        "input": 52661,
+        "cacheRead": 51315,
+        "cacheWrite": 1250,
+        "cacheWriteByTtl": {
+            "5m": 10,
+            "1h": 1240
+        },
+        "output": 207
+    }
+}

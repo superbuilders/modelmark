@@ -120,6 +120,10 @@ the tags and where fakes live.
 - `system/`: generic helpers: the process table, reading
   a log from its end, git, state files, Markdown tables.
 
+`spec/` holds the file formats modelmark defines for other programs to write,
+one folder each. A format's spec is the source of truth: change its schema and
+conformance cases with it, and its test keeps the three in agreement.
+
 `agents/` may use `pricing/` (its token counts are pricing's `TokenUse`) and
 `trailers/` (a declared `MODELMARK` is a mark). `pricing/`, `trailers/` and
 `setup/` use only `system/`. Sibling folders do not import each other unless

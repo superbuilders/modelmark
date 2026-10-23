@@ -1,0 +1,22 @@
+{
+    "$comment": "OpenAI Responses API, a model without cache-write charges: no cache_write_tokens, so cacheWrite is 0.",
+    "source": "https://developers.openai.com/api/docs/guides/prompt-caching",
+    "api": "openai-responses",
+    "model": "gpt-5.5",
+    "usage": {
+        "input_tokens": 8000,
+        "input_tokens_details": {
+            "cached_tokens": 6144
+        },
+        "output_tokens": 500,
+        "output_tokens_details": {
+            "reasoning_tokens": 320
+        }
+    },
+    "line": {
+        "input": 8000,
+        "cacheRead": 6144,
+        "cacheWrite": 0,
+        "output": 500
+    }
+}

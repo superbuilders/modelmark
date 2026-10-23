@@ -159,7 +159,9 @@ A reply past a context size pays that row’s prices for all its tokens.
 
 Any other agent can name itself by setting `MODELMARK` in the environment its
 commands run in, such as `MODELMARK=jojo:gpt-6.1-sol@high`. It gets a mark but
-no cost or tokens.
+no cost or tokens. The [usage log](spec/usage-log/README.md), a draft file
+format, is how such an agent will report what its replies used, so its commits
+get both.
 
 The harnesses change their logs without notice, so each release is tested
 against the real tools. The newest versions that passed:

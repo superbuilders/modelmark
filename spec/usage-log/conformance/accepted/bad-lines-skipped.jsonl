@@ -1,0 +1,11 @@
+{"modelmark":"usage","version":1,"session":"s-1"}
+{"at":"2026-10-23T17:02:11.408Z","model":"claude-opus-5-5","input":49731,"cacheRead":48211,"cacheWrite":0,"output":812,"cwd":"/srv/work/app"}
+{"at":"2026-10-23T17:03:00Z","model":"claude-opus-5-5","input":-1,"cacheRead":0,"cacheWrite":0,"output":1,"cwd":"/srv/work/app"}
+{"at":"2026-10-23T17:03:01Z","model":"claude-opus-5-5","input":1,"cacheRead":0,"cacheWrite":0,"output":1}
+{"at":"2026-10-23 17:03:02","model":"claude-opus-5-5","input":10,"cacheRead":0,"cacheWrite":0,"output":1,"cwd":"/srv/work/app"}
+{"at":"2026-10-23T17:03:03Z","model":"claude-opus-5-5","input":1.5,"cacheRead":0,"cacheWrite":0,"output":1,"cwd":"/srv/work/app"}
+{"at":"2026-10-23T17:03:04Z","model":"claude-opus-5-5","input":1,"cacheRead":0,"cacheWrite":0,"output":1,"cwd":"work/app"}
+{"at":"2026-10-23T17:03:05Z","model":"claude-opus-5-5","input":100,"cacheRead":900,"cacheWrite":0,"output":1,"cwd":"/srv/work/app"}
+{"at":"2026-10-23T17:03:06Z","model":"claude-opus-5-5","input":100,"cacheRead":0,"cacheWrite":50,"cacheWriteByTtl":{"5m":10,"1h":30},"output":1,"cwd":"/srv/work/app"}
+{"at":"2026-10-23T17:03:07Z","model":"claude-opus-5-5","input":100,"cacheRead":0,"cacheWrite":50,"cacheWriteByTtl":{"an hour":50},"output":1,"cwd":"/srv/work/app"}
+["not","an","object"]
