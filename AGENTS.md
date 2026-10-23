@@ -130,11 +130,16 @@ they lack. Move code down a layer rather than adding an upward edge.
 
 ## How detection works
 
-The agent is the nearest `claude`, `codex` or `pi` process above the hook,
-from one `ps` call. `ps` joins a command's words with spaces, so an absolute
-executable path that isn't a file runs on to the shortest longer prefix that
-is one: Claude's desktop app runs `claude` from under
-`~/Library/Application Support`. Environment markers are only a fallback when the walk is
+The agent is the nearest `claude`, `codex` or `pi` process above the hook.
+Two `ps` calls give each process's name and its command line. The name comes
+first: `ps` joins a command line's words with spaces, so a space inside a path
+(Claude's desktop app runs `claude` from under `~/Library/Application Support`)
+can't be told from one between words, while the name, listed last, keeps its
+spaces. On macOS the name is the path the process was launched by; on Linux it
+is the name the process gives itself, which is how a `claude` whose binary is
+named for its version still reads as `claude`. The command line covers a
+runtime running an agent's script (`node /path/to/codex`), whose name is the
+runtime's. Environment markers are only a fallback when the walk is
 blocked, because they outlive their agent: a terminal opened from an agent, or
 an agent started inside another, inherits them. Codex's sandbox hides its
 parent processes, so its sandbox markers name it when the walk tops out.

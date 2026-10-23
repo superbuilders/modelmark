@@ -1,15 +1,14 @@
-import { basename, isAbsolute } from 'node:path'
+import { basename } from 'node:path'
 
-import { isFile } from '../system/files'
 import { readProcessTable } from '../system/processes'
 import { parseMark } from '../trailers/mark'
 import { DECLARED_MARK, HARNESS_COMMANDS, MAX_TREE_DEPTH, SCRIPT_RUNTIMES } from './constants'
 import { readModelUse } from './models'
 
-import type { ProcessTable, Env } from '../system/types'
+import type { Env, ProcessInfo, ProcessTable } from '../system/types'
 import type { AgentId, Detection, FoundAgent } from './types'
 
-/** Each harness's executable name (the command's first word, without its folder), to the agent it starts. */
+/** Each harness's executable name (without its folder), to the agent it starts. */
 const AGENTS_BY_EXECUTABLE = new Map(
     (Object.entries(HARNESS_COMMANDS) as [AgentId, string][]).map(([agent, command]) => [
         command,
@@ -18,45 +17,35 @@ const AGENTS_BY_EXECUTABLE = new Map(
 )
 
 /**
- * Split a command line into its executable and the arguments after it.
- *
- * `ps` joins the executable and its arguments with spaces, so the first space
- * can fall inside the executable's path: Claude's desktop app runs `claude`
- * from under `~/Library/Application Support`. An absolute first word that
- * isn't a file runs on to the shortest longer prefix that is one.
- * @param line - a command line, executable first, without leading spaces
- * @returns the executable and the rest of the line
- */
-function splitExecutable(line: string): [executable: string, rest: string] {
-    const cuts = [...line.matchAll(/\s/g), { index: line.length }].map(({ index }) => index)
-    const [first = line.length, ...later] = cuts
-    const word = line.slice(0, first)
-
-    if (isAbsolute(word) && !isFile(word)) {
-        const cut = later.find(end => isFile(line.slice(0, end)))
-
-        if (cut !== undefined) {
-            return [line.slice(0, cut), line.slice(cut)]
-        }
-    }
-
-    return [word, line.slice(first)]
-}
-
-/**
- * Name the agent a command line starts, if any.
+ * Name the agent a command line starts, if any, from its first word, or from
+ * its second when the first is a script runtime (`node /path/to/codex`).
  * @param args - a full command line, executable first
  * @returns the agent, or undefined for any other program
  */
 export function agentOfCommand(args: string): AgentId | undefined {
-    const [first, rest] = splitExecutable(args.trim())
+    const [first = '', second = ''] = args.trim().split(/\s+/)
     let executable = basename(first)
 
     if (SCRIPT_RUNTIMES.includes(executable)) {
-        executable = basename(splitExecutable(rest.trim())[0])
+        executable = basename(second)
     }
 
     return AGENTS_BY_EXECUTABLE.get(executable)
+}
+
+/**
+ * Name the agent a process is, if any.
+ *
+ * Its name comes first: `ps` keeps it whole, while the command line's words
+ * are joined with spaces, so a space inside a path (Claude's desktop app runs
+ * `claude` from under `~/Library/Application Support`) can't be told from one
+ * between words. The command line covers a runtime running an agent's script,
+ * whose name is the runtime's.
+ * @param info - the process's row in the table
+ * @returns the agent, or undefined for any other program
+ */
+export function agentOfProcess(info: ProcessInfo): AgentId | undefined {
+    return AGENTS_BY_EXECUTABLE.get(basename(info.name)) ?? agentOfCommand(info.args)
 }
 
 /**
@@ -79,7 +68,7 @@ function walkToAgent(table: ProcessTable, startPid: number): AgentId | 'top' | '
             return 'blocked'
         }
 
-        const agent = agentOfCommand(info.args)
+        const agent = agentOfProcess(info)
 
         if (agent) {
             return agent

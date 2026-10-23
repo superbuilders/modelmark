@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 import { describe, expect, test } from 'vitest'
 
-import { filesEndingWith, findFileNewestFirst, isFile, newestFirst } from './files'
+import { filesEndingWith, findFileNewestFirst, newestFirst } from './files'
 
 /**
  * Create an empty file, with its folders.
@@ -19,18 +19,6 @@ function touch(path: string, mtime = 1000): string {
 
     return path
 }
-
-describe('isFile', () => {
-    test('is true only for a file that exists', () => {
-        const root = mkdtempSync(join(tmpdir(), 'modelmark-files-'))
-        const file = touch(join(root, 'with space', 'claude'))
-
-        expect(isFile(file)).toBe(true)
-        expect(isFile(join(root, 'with space'))).toBe(false)
-        expect(isFile(join(root, 'missing'))).toBe(false)
-        expect(isFile(join(root, 'x'.repeat(5000)))).toBe(false)
-    })
-})
 
 describe('findFileNewestFirst', () => {
     test('searches the newest dated folder first and stops at the depth limit', () => {
