@@ -29,7 +29,22 @@ function checkpointName(source: UseSource, session: string, root: string): strin
  * @returns the state file's name
  */
 function sessionCheckpointName(source: UseSource, session: string): string {
-    return `checkpoints/${source}-${encodeURIComponent(session)}`
+    return `checkpoints/${source}-${fileSafe(source, session)}`
+}
+
+/**
+ * A session id as a file name. The supported harnesses' ids are short and
+ * plain, and keep the names older checkpoints were saved under. A usage log's
+ * id is whatever its writer chose, so it is hashed: a long id would make a
+ * name too long to save, and one that isn't valid text can't be encoded.
+ * @param source - where the session's replies are read from
+ * @param session - its session
+ * @returns the id, safe to use in a file name
+ */
+function fileSafe(source: UseSource, session: string): string {
+    return source === 'usage-log'
+        ? createHash('sha256').update(session).digest('hex').slice(0, 32)
+        : encodeURIComponent(session)
 }
 
 /**

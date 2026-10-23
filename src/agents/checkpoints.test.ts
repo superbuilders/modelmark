@@ -379,10 +379,12 @@ const HARNESSES: Record<UseSource, (replies: Reply[], world: World) => Record<st
         const log = join(world.root, 'usage', 'jojo.jsonl')
         /*
          * The writer names each reply's paths itself: those its calls name,
-         * and the folder a shell call ran from.
+         * and the folder a shell call ran from. Its session id is too long
+         * for a file name and isn't valid text, which a writer is free to
+         * choose and the checkpoint must still be saved under.
          */
         const records = [
-            { modelmark: 'usage', version: 1, session: 'c1' },
+            { modelmark: 'usage', version: 1, session: `c1${'x'.repeat(300)}\uD800` },
             ...replies.map((reply, n) => ({
                 at: replyTime(n),
                 model: 'claude-opus-5-5',

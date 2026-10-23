@@ -113,6 +113,21 @@
             }
         },
         {
+            "file": "accepted/header-like-reply.jsonl",
+            "conforms": true,
+            "accepted": true,
+            "session": "s-1",
+            "replies": 1,
+            "tokens": {
+                "input": 49731,
+                "cacheRead": 48211,
+                "cacheWrite": 0,
+                "output": 812,
+                "fresh": 1520,
+                "cacheWriteByTtl": {}
+            }
+        },
+        {
             "file": "rejected/no-header.jsonl",
             "conforms": false,
             "accepted": false

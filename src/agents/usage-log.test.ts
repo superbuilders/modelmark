@@ -80,4 +80,8 @@ describe('finding the log', () => {
         ).toBeUndefined()
         expect(usageLog({ MODELMARK_USAGE: join(CONFORMANCE, 'missing.jsonl') })).toBeUndefined()
     })
+
+    test('only a regular file is read, since a pipe would hold up the commit', () => {
+        expect(usageLog({ MODELMARK_USAGE: '/dev/zero' })).toBeUndefined()
+    })
 })

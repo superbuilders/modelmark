@@ -1,3 +1,5 @@
+import { statSync } from 'node:fs'
+
 import { firstRecord, recordsFromEnd } from '../system/tail'
 import { USAGE_LOG, USAGE_LOG_VERSION } from './constants'
 import { CACHE_TTL, USAGE_LOG_TIME } from './patterns'
@@ -66,7 +68,7 @@ function replyOf(record: unknown): LoggedReply | undefined {
         'output',
     ].map(key => valueAt(record, key))
     const cwd = valueAt(record, 'cwd')
-    const paths = valueAt(record, 'paths') ?? []
+    const paths = valueAt(record, 'paths')
     const split = valueAt(record, 'cacheWriteByTtl')
     const time = typeof at === 'string' && USAGE_LOG_TIME.test(at) ? Date.parse(at) : Number.NaN
 
@@ -79,8 +81,7 @@ function replyOf(record: unknown): LoggedReply | undefined {
         !isCount(output) ||
         cacheRead + cacheWrite > input ||
         !isAbsolutePath(cwd) ||
-        !Array.isArray(paths) ||
-        !paths.every(isAbsolutePath) ||
+        (paths !== undefined && !(Array.isArray(paths) && paths.every(isAbsolutePath))) ||
         (split !== undefined && !isCacheSplit(split, cacheWrite))
     ) {
         return undefined
@@ -97,14 +98,16 @@ function replyOf(record: unknown): LoggedReply | undefined {
         },
         time,
         cwd,
-        paths,
+        paths: paths ?? [],
     }
 }
 
 /**
  * The usage log the running command's conversation writes, when the
  * environment names one and its header is version 1's (section 6.1).
- * A log that can't be opened is no log: the commit just gets no cost.
+ * A log that can't be opened is no log: the commit just gets no cost. Only a
+ * regular file is opened, since reading a pipe would wait for a writer and
+ * hold up the commit.
  * @param env - the environment
  * @returns the log's path and its session, or undefined when there is no log to read
  */
@@ -117,7 +120,7 @@ export function usageLog(env: Env): { path: string; session: string } | undefine
     }
 
     try {
-        header = firstRecord(path)
+        header = statSync(path).isFile() ? firstRecord(path) : undefined
     } catch {
         return undefined
     }
@@ -132,17 +135,30 @@ export function usageLog(env: Env): { path: string; session: string } | undefine
 }
 
 /**
- * A usage log's replies, newest first. Lines that aren't replies, the header
- * among them, are skipped.
+ * A usage log's replies, newest first. Lines that aren't replies are skipped.
+ * The header is skipped by where it is, the oldest record, so a header that
+ * happens to carry a reply's members is never counted as one.
  * @param path - the log
  * @yields each reply
  */
 export function* usageLogReplies(path: string): Generator<LoggedReply> {
+    /*
+     * Each record waits until an older one turns up, which shows it isn't
+     * the header.
+     */
+    let newer: unknown
+
     for (const record of recordsFromEnd(path)) {
-        const reply = replyOf(record)
+        if (record === undefined) {
+            continue
+        }
+
+        const reply = newer === undefined ? undefined : replyOf(newer)
 
         if (reply) {
             yield reply
         }
+
+        newer = record
     }
 }
