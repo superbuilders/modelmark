@@ -80,29 +80,6 @@ describe('agentOfCommand', () => {
     })
 })
 
-describe("a runtime's script under a folder with a space in its name", () => {
-    const root = mkdtempSync(join(tmpdir(), 'modelmark-detect-'))
-    const pi = join(root, 'Application Support', 'bin', 'pi')
-
-    mkdirSync(join(pi, '..'), { recursive: true })
-    writeFileSync(pi, '')
-
-    test.each([
-        [`node ${pi} -p hi`, 'pi'],
-        [`bun ${pi}`, 'pi'],
-        [`node ${join(root, 'Application Support', 'bin', 'codex')} exec`, undefined],
-        [`node ${root}/Application`, undefined],
-    ])('%s is %s', (args, agent) => {
-        expect(agentOfCommand(args)).toBe(agent)
-    })
-
-    test('is found by its command line, since the process is named for the runtime', () => {
-        expect(agentOfProcess({ ppid: 1, name: '/usr/local/bin/node', args: `node ${pi}` })).toBe(
-            'pi',
-        )
-    })
-})
-
 /** Where Claude's desktop app keeps `claude`, as macOS's `ps` names it: the path it was launched by. */
 const DESKTOP_CLAUDE = '/Users/u/Library/Application Support/Claude/claude-code/2.1.301/claude'
 

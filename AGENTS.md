@@ -139,8 +139,7 @@ spaces. On macOS the name is the path the process was launched by; on Linux it
 is the name the process gives itself, which is how a `claude` whose binary is
 named for its version still reads as `claude`. The command line covers a
 runtime running an agent's script (`node /path/to/codex`), whose name is the
-runtime's; an absolute script path that isn't a file runs on across spaces to
-the shortest longer one that is. Environment markers are only a fallback when the walk is
+runtime's. Environment markers are only a fallback when the walk is
 blocked, because they outlive their agent: a terminal opened from an agent, or
 an agent started inside another, inherits them. Codex's sandbox hides its
 parent processes, so its sandbox markers name it when the walk tops out.

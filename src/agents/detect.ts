@@ -1,6 +1,5 @@
-import { basename, isAbsolute } from 'node:path'
+import { basename } from 'node:path'
 
-import { isFile } from '../system/files'
 import { readProcessTable } from '../system/processes'
 import { parseMark } from '../trailers/mark'
 import { DECLARED_MARK, HARNESS_COMMANDS, MAX_TREE_DEPTH, SCRIPT_RUNTIMES } from './constants'
@@ -18,42 +17,17 @@ const AGENTS_BY_EXECUTABLE = new Map(
 )
 
 /**
- * The script a runtime runs, from the command line after the runtime.
- *
- * A runtime's process name is its own, so only the command line names its
- * script, and `ps` joins its words with spaces. An absolute first word that
- * isn't a file runs on to the shortest longer one that is: a script under
- * `~/Library/Application Support` reads whole.
- * @param rest - the command line after the runtime, without leading spaces
- * @returns the script, as the command line has it
- */
-function scriptOf(rest: string): string {
-    const cuts = [...rest.matchAll(/\s/g), { index: rest.length }].map(({ index }) => index)
-    const [first = rest.length, ...later] = cuts
-    const word = rest.slice(0, first)
-
-    if (!isAbsolute(word) || isFile(word)) {
-        return word
-    }
-
-    const cut = later.find(end => isFile(rest.slice(0, end)))
-
-    return cut === undefined ? word : rest.slice(0, cut)
-}
-
-/**
  * Name the agent a command line starts, if any, from its first word, or from
- * the script when the first is a script runtime (`node /path/to/codex`).
+ * its second when the first is a script runtime (`node /path/to/codex`).
  * @param args - a full command line, executable first
  * @returns the agent, or undefined for any other program
  */
 export function agentOfCommand(args: string): AgentId | undefined {
-    const line = args.trim()
-    const [first = ''] = line.split(/\s/, 1)
+    const [first = '', second = ''] = args.trim().split(/\s+/)
     let executable = basename(first)
 
     if (SCRIPT_RUNTIMES.includes(executable)) {
-        executable = basename(scriptOf(line.slice(first.length).trimStart()))
+        executable = basename(second)
     }
 
     return AGENTS_BY_EXECUTABLE.get(executable)
