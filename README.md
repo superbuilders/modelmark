@@ -149,6 +149,11 @@ kimi-k3           all       3.00   15.00        0.30         3.00
 A reply past a context size pays that row’s prices for all its tokens.
 ```
 
+The cache-write price is for the provider's default lifetime. Writes kept
+longer cost more: Anthropic's 1-hour writes cost twice the input price, and
+OpenAI's 12-hour writes 2.5 times. A commit is priced at those rates when the
+agent's log says how long each write is kept.
+
 ## Supported agents
 
 | Harness     | Mark          | Reads                                   |
@@ -158,10 +163,10 @@ A reply past a context size pays that row’s prices for all its tokens.
 | Pi          | `pi`          | its session file and `PI_*` variables   |
 
 Any other agent can name itself by setting `MODELMARK` in the environment its
-commands run in, such as `MODELMARK=jojo:gpt-6.1-sol@high`. It gets a mark but
-no cost or tokens. The [usage log](spec/usage-log/README.md), a draft file
-format, is how such an agent will report what its replies used, so its commits
-get both.
+commands run in, such as `MODELMARK=jojo:gpt-6.1-sol@high`. That gives its
+commits a mark. To give them a cost and tokens too, it writes what its replies
+used to a [usage log](spec/usage-log/README.md) and sets `MODELMARK_USAGE` to
+the log's path.
 
 The harnesses change their logs without notice, so each release is tested
 against the real tools. The newest versions that passed:

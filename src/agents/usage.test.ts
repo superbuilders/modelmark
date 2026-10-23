@@ -125,6 +125,37 @@ describe('Claude Code', () => {
         return { CLAUDE_CODE_SESSION_ID: 's1', CLAUDE_CONFIG_DIR: config }
     }
 
+    test('reads the split of cache writes by lifetime', () => {
+        const config = scratch()
+
+        writeLog(join(config, 'projects', '-repo', 's2.jsonl'), [
+            claudeReply('10:00', 'm1', {
+                input_tokens: 2,
+                cache_creation_input_tokens: 300,
+                cache_creation: { ephemeral_5m_input_tokens: 100, ephemeral_1h_input_tokens: 200 },
+                output_tokens: 9,
+            }),
+        ])
+
+        expect(
+            readSessionUse(
+                'claude-code',
+                { CLAUDE_CODE_SESSION_ID: 's2', CLAUDE_CONFIG_DIR: config },
+                undefined,
+                REPO,
+            )?.uses,
+        ).toEqual([
+            {
+                model: 'claude-opus-5-5',
+                input: 2,
+                cacheRead: 0,
+                cacheWrite: 300,
+                cacheWriteByTtl: { '5m': 100, '1h': 200 },
+                output: 9,
+            },
+        ])
+    })
+
     test('counts each reply once across the main and subagent logs', () => {
         const use = readSessionUse('claude-code', session(), undefined, REPO)
 
@@ -340,6 +371,56 @@ describe('Pi', () => {
                     cacheRead: 500,
                     cacheWrite: 60,
                     output: 4,
+                },
+            ],
+        })
+    })
+})
+
+describe('usage log', () => {
+    test('reads each reply after the point, its fresh input what the cache left over', () => {
+        const file = writeLog(join(scratch(), 'jojo.jsonl'), [
+            { modelmark: 'usage', version: 1, session: 'c1' },
+            {
+                at: new Date(at('09:00')).toISOString(),
+                model: 'claude-opus-5-5',
+                input: 9,
+                cacheRead: 0,
+                cacheWrite: 0,
+                output: 1,
+                cwd: REPO,
+            },
+            {
+                at: new Date(at('10:00')).toISOString(),
+                model: 'claude-opus-5-5',
+                input: 1000,
+                cacheRead: 700,
+                cacheWrite: 200,
+                cacheWriteByTtl: { '1h': 200 },
+                output: 40,
+                cwd: REPO,
+            },
+            {
+                at: new Date(at('10:05')).toISOString(),
+                model: 'claude-opus-5-5',
+                input: 5,
+                cacheRead: 0,
+                cacheWrite: 0,
+                output: 5,
+                cwd: OTHER,
+            },
+        ])
+
+        expect(readSessionUse('usage-log', { MODELMARK_USAGE: file }, at('09:00'), REPO)).toEqual({
+            through: at('10:00'),
+            uses: [
+                {
+                    model: 'claude-opus-5-5',
+                    input: 100,
+                    cacheRead: 700,
+                    cacheWrite: 200,
+                    cacheWriteByTtl: { '1h': 200 },
+                    output: 40,
                 },
             ],
         })

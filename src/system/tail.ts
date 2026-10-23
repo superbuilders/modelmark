@@ -122,10 +122,11 @@ export function findLast<T>(
 }
 
 /**
- * Read a JSONL log's first record, such as a header naming where the session started.
+ * Read a JSONL log's first record, such as a header naming where the session
+ * started. Empty lines before it are passed over.
  * @param path - the log file
  * @param chunkBytes - how much of the file's start to read
- * @returns the parsed record, or undefined when the first line is not JSON
+ * @returns the parsed record, or undefined when the first non-empty line is not JSON
  */
 export function firstRecord(path: string, chunkBytes = TAIL_CHUNK_BYTES): unknown {
     const fd = openSync(path, 'r')
@@ -134,7 +135,7 @@ export function firstRecord(path: string, chunkBytes = TAIL_CHUNK_BYTES): unknow
         const buffer = Buffer.allocUnsafe(chunkBytes)
         const text = buffer.subarray(0, readSync(fd, buffer, 0, chunkBytes, 0)).toString('utf8')
 
-        return parseLine(text.split('\n', 1)[0] ?? '')
+        return parseLine(text.split('\n').find(line => line.trim() !== '') ?? '')
     } finally {
         closeSync(fd)
     }

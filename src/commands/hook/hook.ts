@@ -13,7 +13,7 @@ import { messageCost, writeTrailers } from '../../trailers/message'
 import { addTokens, messageTokens, tokensTrailer } from '../../trailers/tokens'
 import { SKIPPED_SOURCES } from './constants'
 
-import type { Detection, FoundAgent, ModelUse } from '../../agents/types'
+import type { Detection } from '../../agents/types'
 import type { PriceList } from '../../pricing/types'
 import type { Env } from '../../system/types'
 
@@ -73,7 +73,7 @@ function refreshPricesIfDue(env: Env = process.env): void {
  * so no later commit counts them again. Then the prices are refreshed in the
  * background when they are due.
  * @param messageFile - the message file git passes to prepare-commit-msg
- * @param detection - the agent making the commit, and its model
+ * @param detection - the agent making the commit, and its model; a declared agent's replies come from its usage log
  * @param env - the environment (default: this process's)
  * @param prices - the price list (default: the shipped one, updated from the cache, read only when there are replies to price)
  * @param refresh - starts a price refresh if one is due
@@ -81,14 +81,14 @@ function refreshPricesIfDue(env: Env = process.env): void {
  */
 export async function usageMessage(
     messageFile: string,
-    detection: FoundAgent & ModelUse,
+    detection: Detection,
     env: Env = process.env,
     prices?: PriceList,
     refresh: () => void = () => refreshPricesIfDue(env),
 ): Promise<string[]> {
-    const { agent } = detection
+    const source = detection.via === 'declared' ? 'usage-log' : detection.agent
     const attempt = await commitAttempt(markTrailer(detection))
-    const use = attempt && (await usesSinceLastCommit(agent, env, attempt.root))
+    const use = attempt && (await usesSinceLastCommit(source, env, attempt.root))
 
     if (!attempt || !use) {
         return []
@@ -112,7 +112,7 @@ export async function usageMessage(
         await writeTrailers(messageFile, trailers, 'replace')
     }
 
-    markCounted(agent, use, attempt, env)
+    markCounted(source, use, attempt, env)
     refresh()
 
     return trailers
@@ -148,10 +148,7 @@ export async function hookCommand(
         return
     }
 
-    /*
-     * A declared mark comes from an agent modelmark can't read the logs of.
-     */
-    if (!detection || detection.via === 'declared') {
+    if (!detection) {
         return
     }
 

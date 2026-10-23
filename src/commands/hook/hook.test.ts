@@ -204,6 +204,53 @@ describe('usageMessage', () => {
         )
     })
 
+    test("a declared agent's usage log prices its commit, 1-hour cache writes at their own rate", async () => {
+        const root = mkdtempSync(join(tmpdir(), 'modelmark-declared-'))
+        const repo = join(root, 'repo')
+        const log = join(root, 'jojo.jsonl')
+        const jojo: Detection = {
+            agent: 'jojo',
+            model: 'claude-opus-5-5',
+            effort: null,
+            via: 'declared',
+        }
+
+        mkdirSync(repo)
+        await git(['init', '-q'], repo)
+        vi.spyOn(process, 'cwd').mockReturnValue(repo)
+        writeFileSync(
+            log,
+            [
+                { modelmark: 'usage', version: 1, session: 'c1' },
+                {
+                    at: '2026-10-20T10:00:00Z',
+                    model: 'claude-opus-5-5',
+                    input: 1_000_000,
+                    cacheRead: 0,
+                    cacheWrite: 1_000_000,
+                    cacheWriteByTtl: { '1h': 1_000_000 },
+                    output: 0,
+                    cwd: repo,
+                },
+            ]
+                .map(line => `${JSON.stringify(line)}\n`)
+                .join(''),
+        )
+
+        expect(
+            await usageMessage(
+                messageFile('One\n'),
+                jojo,
+                { MODELMARK_USAGE: log, XDG_STATE_HOME: join(root, 'state') },
+                { 'claude-opus-5-5': { input: 4, output: 20, cacheWrite: 5 } },
+                refresh,
+            ),
+        ).toEqual([
+            'Assisted-cost: $8.00',
+            'Assisted-tokens: 0 input, 1000000 cache-write, 0 output, 0 cache-read',
+        ])
+    })
+
     test('a commit git drops leaves its replies to the next try', async () => {
         const { env, reply } = await session()
         const path = messageFile(`One\n\n${MARK}\n`)

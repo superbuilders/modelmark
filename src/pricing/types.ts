@@ -11,6 +11,14 @@ export interface TokenUse {
     cacheRead: number
     /** Input written to the prompt cache. */
     cacheWrite: number
+
+    /**
+     * The part of `cacheWrite` the log splits by how long the cache keeps it,
+     * by lifetime label (`5m`, `1h`). Writes it leaves out are at the
+     * provider's default lifetime.
+     */
+    cacheWriteByTtl?: Readonly<Record<string, number>>
+
     /** Output, thinking included. */
     output: number
 }

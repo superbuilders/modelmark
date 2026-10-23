@@ -3,9 +3,10 @@ import { basename, join } from 'node:path'
 
 import { filesEndingWith, findFileNewestFirst } from '../system/files'
 import { JSONL } from './constants'
+import { usageLog } from './usage-log'
 
 import type { Env } from '../system/types'
-import type { AgentId } from './types'
+import type { UseSource } from './types'
 
 /**
  * This Claude Code session's logs.
@@ -51,18 +52,22 @@ export function codexLog(env: Env): string | undefined {
 }
 
 /**
- * The session an agent's logs belong to, as a name that stays the same across
+ * The session a source's logs belong to, as a name that stays the same across
  * its commits.
- * @param agent - which agent
+ * @param source - where the session's replies are read from
  * @param env - the environment
- * @returns the session's name, or undefined when the agent names no session
+ * @returns the session's name, or undefined when there is no session to read
  */
-export function sessionName(agent: AgentId, env: Env): string | undefined {
-    if (agent === 'claude-code') {
+export function sessionName(source: UseSource, env: Env): string | undefined {
+    if (source === 'usage-log') {
+        return usageLog(env)?.session
+    }
+
+    if (source === 'claude-code') {
         return env.CLAUDE_CODE_SESSION_ID
     }
 
-    if (agent === 'codex') {
+    if (source === 'codex') {
         return env.CODEX_THREAD_ID
     }
 

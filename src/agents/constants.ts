@@ -32,6 +32,12 @@ export const MAX_TREE_DEPTH = 64
 /** The variable an agent modelmark doesn't know sets to name itself, holding a mark such as `jojo:gpt-6.1-sol@high`. */
 export const DECLARED_MARK = 'MODELMARK'
 
+/** The variable naming the usage log of the conversation running a command (spec/usage-log/v1.md, section 3). */
+export const USAGE_LOG = 'MODELMARK_USAGE'
+
+/** The usage log version this modelmark reads. */
+export const USAGE_LOG_VERSION = 1
+
 /** What an unreadable log gives. */
 export const NO_MODEL_USE: Readonly<ModelUse> = { model: null, effort: null }
 

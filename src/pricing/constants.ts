@@ -23,6 +23,20 @@ export const FIRST_PARTY_PROVIDERS = [
     'meta',
 ] as const
 
+/**
+ * What a cache write costs at each lifetime a provider sells, by the label a
+ * log gives it. `default` is the price list's cache-write price, which is the
+ * provider's default lifetime's; a number is that many times the input price,
+ * since price lists give no other. Anthropic sells 5m and 1h, OpenAI 30m and
+ * 12h (usage log v1, section 6.4).
+ */
+export const CACHE_LIFETIMES: Readonly<Record<string, 'default' | number>> = {
+    '5m': 'default',
+    '1h': 2,
+    '30m': 'default',
+    '12h': 2.5,
+}
+
 /** Set to anything to turn off price downloads; prices already downloaded still apply. */
 export const OFFLINE_VARIABLE = 'MODELMARK_OFFLINE'
 

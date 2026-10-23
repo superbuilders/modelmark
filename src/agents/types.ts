@@ -23,6 +23,12 @@ export interface FoundAgent {
 }
 
 /**
+ * Where a session's replies are read from: a harness's own logs, or the usage
+ * log an agent modelmark doesn't know writes.
+ */
+export type UseSource = AgentId | 'usage-log'
+
+/**
  * The model behind an agent's latest reply, and how hard it was asked to think.
  */
 export interface ModelUse {
@@ -75,6 +81,16 @@ export interface ReplyPlace {
     cwd: string | undefined
     /** The absolute paths the reply's tool calls name. */
     paths: string[]
+}
+
+/**
+ * One reply a log holds: its tokens, when it was written, and where it worked.
+ */
+export interface LoggedReply extends ReplyPlace {
+    /** Its tokens. */
+    use: TokenUse
+    /** When it was written (ms since the epoch). */
+    time: number
 }
 
 /**

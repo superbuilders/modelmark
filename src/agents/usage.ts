@@ -7,10 +7,11 @@ import { CLAUDE_SYNTHETIC_MODEL, CODEX_KEYS, CODEX_TOOL_CALLS, USAGE_KEYS } from
 import { claudeCodeLogs, codexLog } from './logs'
 import { CODEX_WORKDIR } from './patterns'
 import { countAt, recordTime, stringAt, valueAt } from './records'
+import { usageLog, usageLogReplies } from './usage-log'
 
 import type { TokenUse } from '../pricing/types'
 import type { Env } from '../system/types'
-import type { AgentId, LoggedUse, ReplyPlace } from './types'
+import type { LoggedUse, ReplyPlace, UseSource } from './types'
 
 /**
  * Whether a record was written at or before a point in time, so it and every
@@ -169,6 +170,7 @@ function claudeCodeUse(
             }
 
             const usage = valueAt(record, 'message', 'usage')
+            const split = valueAt(usage, 'cache_creation')
 
             replies.set(key, {
                 use: {
@@ -176,6 +178,14 @@ function claudeCodeUse(
                     input: countAt(usage, 'input_tokens'),
                     cacheRead: countAt(usage, 'cache_read_input_tokens'),
                     cacheWrite: countAt(usage, 'cache_creation_input_tokens'),
+                    ...(split === undefined
+                        ? {}
+                        : {
+                              cacheWriteByTtl: {
+                                  '5m': countAt(split, 'ephemeral_5m_input_tokens'),
+                                  '1h': countAt(split, 'ephemeral_1h_input_tokens'),
+                              },
+                          }),
                     output: countAt(usage, 'output_tokens'),
                 },
                 time,
@@ -381,35 +391,71 @@ function piUse(
     return { uses, through }
 }
 
-/** Each agent's reader. */
+/**
+ * The replies in the usage log the environment names after a point
+ * (spec/usage-log/v1.md). The log says where each reply worked.
+ * @param env - the environment
+ * @param since - count only replies after this (ms since the epoch), or everything when undefined
+ * @param counts - whether a reply counts, from where it worked
+ * @returns the replies and the newest one's time, or undefined when there is no log to read
+ */
+function usageLogUse(
+    env: Env,
+    since: number | undefined,
+    counts: (place: ReplyPlace) => boolean,
+): LoggedUse | undefined {
+    const log = usageLog(env)
+
+    if (!log) {
+        return undefined
+    }
+
+    const uses: TokenUse[] = []
+    let through: number | undefined
+
+    for (const reply of usageLogReplies(log.path)) {
+        if (notAfter(reply.time, since)) {
+            break
+        }
+
+        if (counts(reply)) {
+            uses.push(reply.use)
+            through = later(through, reply.time)
+        }
+    }
+
+    return { uses, through }
+}
+
+/** Each source's reader. */
 const READERS: Readonly<
     Record<
-        AgentId,
+        UseSource,
         (
             env: Env,
             since: number | undefined,
             counts: (place: ReplyPlace) => boolean,
         ) => LoggedUse | undefined
     >
-> = { 'claude-code': claudeCodeUse, codex: codexUse, pi: piUse }
+> = { 'claude-code': claudeCodeUse, codex: codexUse, pi: piUse, 'usage-log': usageLogUse }
 
 /**
- * The tokens an agent's session used after a point in time in one
- * repository, read from the agent's own logs.
- * @param agent - which agent
+ * The tokens a session used after a point in time in one repository, read
+ * from the agent's own logs or its usage log.
+ * @param source - where its replies are read from
  * @param env - the environment
  * @param since - count only replies after this (ms since the epoch), or the whole session when undefined
  * @param root - count only replies that worked in this repository
  * @returns the session's replies, or undefined when its logs can't be found or read
  */
 export function readSessionUse(
-    agent: AgentId,
+    source: UseSource,
     env: Env,
     since: number | undefined,
     root: string,
 ): LoggedUse | undefined {
     try {
-        return READERS[agent](env, since, workedIn(root))
+        return READERS[source](env, since, workedIn(root))
     } catch {
         return undefined
     }

@@ -4,14 +4,15 @@ import { join } from 'node:path'
 
 import { describe, expect, test } from 'vitest'
 
+import { absolutePaths } from '../system/repos'
 import { markCounted, usesSinceLastCommit } from './checkpoints'
 
-import type { AgentId } from './types'
+import type { UseSource } from './types'
 
 /*
  * Which commits pay for which replies, when one session works across several
  * repositories. Each scenario is a session's replies and commits, played
- * through each harness's own log format. Reply n writes 2^n output tokens, so
+ * through each harness's own log format and the usage log. Reply n writes 2^n output tokens, so
  * the set of replies a commit counted reads back from its outputs.
  */
 
@@ -241,10 +242,10 @@ function command({ shell, from }: { shell: string; from?: Folder }, world: World
 }
 
 /**
- * Each harness's log for a session's replies so far, and the variables that
+ * Each source's log for a session's replies so far, and the variables that
  * point the hook at it.
  */
-const HARNESSES: Record<AgentId, (replies: Reply[], world: World) => Record<string, string>> = {
+const HARNESSES: Record<UseSource, (replies: Reply[], world: World) => Record<string, string>> = {
     'claude-code': (replies, world) => {
         const config = join(world.root, 'claude')
         const log = join(config, 'projects', '-a', 's1.jsonl')
@@ -374,6 +375,37 @@ const HARNESSES: Record<AgentId, (replies: Reply[], world: World) => Record<stri
 
         return { PI_SESSION_FILE: log }
     },
+    'usage-log': (replies, world) => {
+        const log = join(world.root, 'usage', 'jojo.jsonl')
+        /*
+         * The writer names each reply's paths itself: those its calls name,
+         * and the folder a shell call ran from.
+         */
+        const records = [
+            { modelmark: 'usage', version: 1, session: 'c1' },
+            ...replies.map((reply, n) => ({
+                at: replyTime(n),
+                model: 'claude-opus-5-5',
+                input: 0,
+                cacheRead: 0,
+                cacheWrite: 0,
+                output: 2 ** n,
+                cwd: world.folders[reply.in],
+                paths: (reply.calls ?? []).flatMap(call => [
+                    ...absolutePaths(
+                        placed('shell' in call ? call.shell : call.edit, world),
+                        join(world.root, 'home'),
+                    ),
+                    ...('from' in call && call.from ? [world.folders[call.from]] : []),
+                ]),
+            })),
+        ]
+
+        mkdirSync(join(log, '..'), { recursive: true })
+        writeFileSync(log, records.map(record => `${JSON.stringify(record)}\n`).join(''))
+
+        return { MODELMARK_USAGE: log }
+    },
 }
 
 /**
@@ -387,8 +419,8 @@ function moves({ steps }: Scenario): boolean {
     return new Set(steps.flatMap(step => ('in' in step ? [step.in] : []))).size > 1
 }
 
-describe.each(Object.keys(HARNESSES) as AgentId[])('%s', agent => {
-    test.each(SCENARIOS.filter(scenario => agent !== 'pi' || !moves(scenario)))(
+describe.each(Object.keys(HARNESSES) as UseSource[])('%s', source => {
+    test.each(SCENARIOS.filter(scenario => source !== 'pi' || !moves(scenario)))(
         '$name',
         async ({ steps }) => {
             const world = makeWorld()
@@ -405,8 +437,8 @@ describe.each(Object.keys(HARNESSES) as AgentId[])('%s', agent => {
                     continue
                 }
 
-                const env = { ...state, ...HARNESSES[agent](replies, world) }
-                const use = await usesSinceLastCommit(agent, env, world.folders[step.commit])
+                const env = { ...state, ...HARNESSES[source](replies, world) }
+                const use = await usesSinceLastCommit(source, env, world.folders[step.commit])
                 const counted = use?.uses.map(({ output }) => Math.log2(output)).toSorted()
 
                 expect(counted, `the commit in ${step.commit}`).toEqual(step.counts)
@@ -417,7 +449,7 @@ describe.each(Object.keys(HARNESSES) as AgentId[])('%s', agent => {
                  */
                 if (use) {
                     markCounted(
-                        agent,
+                        source,
                         use,
                         { gitDir: join(world.root, 'gone'), root: use.root, head: '', mark: '' },
                         env,

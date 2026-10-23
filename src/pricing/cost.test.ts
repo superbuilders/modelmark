@@ -56,6 +56,33 @@ describe('usesCost', () => {
         expect(usesCost([reply('gpt-6.1-sol', { cacheWrite: 100_000 })], PRICES)).toBeCloseTo(0.2)
     })
 
+    test('a longer cache lifetime pays its multiple of the input price', () => {
+        const writes = reply('claude-opus-5-5', {
+            cacheWrite: 1_000_000,
+            cacheWriteByTtl: { '5m': 250_000, '1h': 750_000 },
+        })
+
+        expect(usesCost([writes], PRICES)).toBeCloseTo(0.25 * 5 + 0.75 * 4 * 2)
+    })
+
+    test('writes the split leaves out are at the default lifetime', () => {
+        const writes = reply('claude-opus-5-5', {
+            cacheWrite: 1_000_000,
+            cacheWriteByTtl: { '1h': 500_000 },
+        })
+
+        expect(usesCost([writes], PRICES)).toBeCloseTo(0.5 * 5 + 0.5 * 4 * 2)
+    })
+
+    test('a lifetime without a price makes the whole cost unknown', () => {
+        const writes = reply('claude-opus-5-5', {
+            cacheWrite: 1000,
+            cacheWriteByTtl: { '2h': 1000 },
+        })
+
+        expect(usesCost([writes], PRICES)).toBeNull()
+    })
+
     test('a model without a price makes the whole cost unknown', () => {
         expect(
             usesCost(

@@ -149,7 +149,10 @@ an agent started inside another, inherits them. Codex's sandbox hides its
 parent processes, so its sandbox markers name it when the walk tops out.
 An agent modelmark doesn't know names itself in `MODELMARK` (a whole mark,
 `jojo:gpt-6.1-sol@high`). It wins over the markers but not over a supported
-harness in the process tree, since a command run inside one inherits it.
+harness in the process tree, since a command run inside one inherits it. Its
+replies' tokens come from the usage log `MODELMARK_USAGE` names
+(`spec/usage-log/v1.md`, read by `agents/usage-log.ts`), which says where each
+reply worked; without one, its commits get a mark only.
 
 The model comes from the agent's own session log, read from its end
 (`system/tail.ts`), never from the model: Claude Code's
@@ -172,7 +175,11 @@ id. Codex writes a `token_usage_record` after each reply, before the tool it
 asked for runs, so the commit's own reply is counted.
 
 Each reply is priced on its own from models.dev's first-party prices
-(`pricing/`); a context tier prices the whole reply. The package ships
+(`pricing/`); a context tier prices the whole reply. models.dev's cache-write
+price is the default lifetime's; writes a log says are kept longer (Claude
+Code's `cache_creation`, a usage log's `cacheWriteByTtl`) pay
+`CACHE_LIFETIMES`' multiple of the input price, and a lifetime it lacks makes
+the cost unknown. The package ships
 `prices.json` (`scripts/prices` refreshes it), and the hook lays the copy in
 `$XDG_CACHE_HOME/modelmark/prices.json` over it. After costing, the hook
 may start the hidden `refresh-prices` command detached (README, "Fresh
