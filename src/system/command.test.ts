@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
 import { git, runCommand } from './command'
-import { readProcessTable } from './processes'
+import { parseProcessTable, readProcessTable } from './processes'
 
 describe('runCommand', () => {
     test('a missing executable reads as exit 127 instead of throwing', async () => {
@@ -27,6 +27,23 @@ describe('readProcessTable', () => {
 
     test('a failing or empty listing reads as null', async () => {
         expect(await readProcessTable(['false'])).toBeNull()
-        expect(await readProcessTable(['true'])).toBeNull()
+        expect(await readProcessTable(undefined, ['false'])).toBeNull()
+        expect(await readProcessTable(['true'], ['true'])).toBeNull()
+    })
+})
+
+describe('parseProcessTable', () => {
+    test("keeps a name's spaces, and gives a process missing from the command lines its name", () => {
+        const table = parseProcessTable(
+            ' 40  30 /Users/u/Library/Application Support/Claude/claude\n 50  40 git',
+            ' 40 /Users/u/Library/Application Support/Claude/claude --verbose',
+        )
+
+        expect(table.get(40)).toEqual({
+            ppid: 30,
+            name: '/Users/u/Library/Application Support/Claude/claude',
+            args: '/Users/u/Library/Application Support/Claude/claude --verbose',
+        })
+        expect(table.get(50)).toEqual({ ppid: 40, name: 'git', args: 'git' })
     })
 })

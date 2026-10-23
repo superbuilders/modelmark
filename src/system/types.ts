@@ -4,7 +4,9 @@
 export interface ProcessInfo {
     /** The parent's process id; 0 or 1 at the top of the tree. */
     ppid: number
-    /** The full command line, executable first. */
+    /** The process's name: on macOS the path it was launched by, on Linux the name it gives itself (15 characters at most). */
+    name: string
+    /** The full command line, executable first, its words joined with spaces: a space inside a word is lost. */
     args: string
 }
 

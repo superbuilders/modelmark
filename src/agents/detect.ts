@@ -5,10 +5,10 @@ import { parseMark } from '../trailers/mark'
 import { DECLARED_MARK, HARNESS_COMMANDS, MAX_TREE_DEPTH, SCRIPT_RUNTIMES } from './constants'
 import { readModelUse } from './models'
 
-import type { ProcessTable, Env } from '../system/types'
+import type { Env, ProcessInfo, ProcessTable } from '../system/types'
 import type { AgentId, Detection, FoundAgent } from './types'
 
-/** Each harness's executable name (the command's first word, without its folder), to the agent it starts. */
+/** Each harness's executable name (without its folder), to the agent it starts. */
 const AGENTS_BY_EXECUTABLE = new Map(
     (Object.entries(HARNESS_COMMANDS) as [AgentId, string][]).map(([agent, command]) => [
         command,
@@ -17,7 +17,8 @@ const AGENTS_BY_EXECUTABLE = new Map(
 )
 
 /**
- * Name the agent a command line starts, if any.
+ * Name the agent a command line starts, if any, from its first word, or from
+ * its second when the first is a script runtime (`node /path/to/codex`).
  * @param args - a full command line, executable first
  * @returns the agent, or undefined for any other program
  */
@@ -30,6 +31,21 @@ export function agentOfCommand(args: string): AgentId | undefined {
     }
 
     return AGENTS_BY_EXECUTABLE.get(executable)
+}
+
+/**
+ * Name the agent a process is, if any.
+ *
+ * Its name comes first: `ps` keeps it whole, while the command line's words
+ * are joined with spaces, so a space inside a path (Claude's desktop app runs
+ * `claude` from under `~/Library/Application Support`) can't be told from one
+ * between words. The command line covers a runtime running an agent's script,
+ * whose name is the runtime's.
+ * @param info - the process's row in the table
+ * @returns the agent, or undefined for any other program
+ */
+export function agentOfProcess(info: ProcessInfo): AgentId | undefined {
+    return AGENTS_BY_EXECUTABLE.get(basename(info.name)) ?? agentOfCommand(info.args)
 }
 
 /**
@@ -52,7 +68,7 @@ function walkToAgent(table: ProcessTable, startPid: number): AgentId | 'top' | '
             return 'blocked'
         }
 
-        const agent = agentOfCommand(info.args)
+        const agent = agentOfProcess(info)
 
         if (agent) {
             return agent
